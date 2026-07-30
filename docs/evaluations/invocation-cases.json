@@ -1,0 +1,74 @@
+[
+  {
+    "label": "full-process",
+    "prompt": "Design a globally available checkout system for 50,000 peak orders per second, compare viable consistency models, and produce the architecture artifacts.",
+    "expectedInvocation": true,
+    "expectedMode": "full-process"
+  },
+  {
+    "label": "direct-answer",
+    "prompt": "Our single PostgreSQL instance handles 20 writes per second and the ADR requires PostgreSQL. Should we add distributed sharding for this new table?",
+    "expectedInvocation": true,
+    "expectedMode": "direct-answer"
+  },
+  {
+    "label": "non-invocation",
+    "prompt": "Rename the submit button to Save and make it blue.",
+    "expectedInvocation": false,
+    "expectedMode": "none"
+  },
+  {
+    "label": "repository",
+    "prompt": "Inspect this repository and design how its existing notification subsystem should evolve to support ten times the current traffic.",
+    "expectedInvocation": true,
+    "expectedMode": "repository"
+  },
+  {
+    "label": "greenfield",
+    "prompt": "Design a greenfield offline-first field-service application for 100,000 technicians with cross-device sync.",
+    "expectedInvocation": true,
+    "expectedMode": "greenfield"
+  },
+  {
+    "label": "resume",
+    "prompt": "Resume the existing commerce-layer system design and incorporate the review feedback about payment reconciliation.",
+    "expectedInvocation": true,
+    "expectedMode": "resume"
+  },
+  {
+    "label": "contradiction",
+    "prompt": "Design a collaborative editor where the requirements demand both immediate offline writes and one always-online authoritative writer; identify and resolve the contradiction before proposing candidates.",
+    "expectedInvocation": true,
+    "expectedMode": "full-process"
+  },
+  {
+    "label": "debugging",
+    "prompt": "Debug why this Python function throws IndexError and add a regression test.",
+    "expectedInvocation": false,
+    "expectedMode": "none"
+  },
+  {
+    "label": "cache-explanation",
+    "prompt": "How does Redis cache-aside work?",
+    "expectedInvocation": false,
+    "expectedMode": "none"
+  },
+  {
+    "label": "cache-choice",
+    "prompt": "Should this service use cache-aside or write-through? Writes are 10 per second, reads are 500 per second, and stale reads are acceptable for one minute.",
+    "expectedInvocation": true,
+    "expectedMode": "direct-answer"
+  },
+  {
+    "label": "global-cache-design",
+    "prompt": "Design caching for a global product catalog serving 200,000 peak reads per second across four regions with a 30-second freshness bound.",
+    "expectedInvocation": true,
+    "expectedMode": "full-process"
+  },
+  {
+    "label": "cache-debugging",
+    "prompt": "Fix this Redis TTL bug where the key expires immediately after SET and add a regression test.",
+    "expectedInvocation": false,
+    "expectedMode": "none"
+  }
+]

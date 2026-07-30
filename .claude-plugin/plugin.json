@@ -1,0 +1,20 @@
+{
+  "name": "system-design-skill",
+  "version": "1.0.0",
+  "description": "Reads a repository as its current architecture, closes the open requirements, runs the capacity math, and compares structurally distinct candidates before recommending one. Outputs an interactive HTML report, a structured design.json, and a durable DESIGN.md.",
+  "author": {
+    "name": "Pin Chen",
+    "url": "https://github.com/pinchen147"
+  },
+  "homepage": "https://github.com/pinchen147/system-design-skill",
+  "repository": "https://github.com/pinchen147/system-design-skill",
+  "license": "MIT",
+  "keywords": [
+    "system-design",
+    "software-architecture",
+    "distributed-systems",
+    "agent-skills",
+    "capacity-planning"
+  ],
+  "skills": ["./skills/system-design"]
+}

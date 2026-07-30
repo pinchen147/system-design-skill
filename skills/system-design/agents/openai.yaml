@@ -1,0 +1,5 @@
+interface:
+  display_name: "System Design"
+  short_description: "Design or evolve a production system from evidence, capacity math, and explicit trade-offs"
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,19 @@
+{
+  "name": "pinchen-skills",
+  "description": "Skills by Pin Chen. Currently: system design from repository evidence, requirements, capacity math, and explicit trade-offs.",
+  "owner": { "name": "Pin Chen", "url": "https://github.com/pinchen147" },
+  "plugins": [
+    {
+      "name": "system-design-skill",
+      "version": "1.0.0",
+      "source": "./",
+      "description": "Reads a repository as its current architecture, runs the capacity math, and compares structurally distinct candidates before recommending one. Outputs an interactive HTML report, a structured design.json, and a durable DESIGN.md.",
+      "category": "development",
+      "tags": [
+        "system-design",
+        "software-architecture",
+        "distributed-systems"
+      ]
+    }
+  ]
+}
