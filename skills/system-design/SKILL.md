@@ -118,9 +118,20 @@ Before rendering, verify:
 
 Write `design.json` and regenerate `DESIGN.md` beside it, preserving any user-owned `## Notes` verbatim. Validate all ids and flow references.
 
-Render with the shipped script—`python3 <skill-dir>/scripts/render_report.py --design docs/design/<slug>/design.json --out "$TMPDIR/system-design-<slug>.html"`—and open the standalone file. Never read [assets/report-template.html](assets/report-template.html) into context or rebuild the report by hand; see [HTML-REPORT.md](HTML-REPORT.md). The report must contain only its own title/date chrome—no prototype or harness wrapper.
+Then render and open it. The run is not complete until the report exists on disk and has been opened—a design.json and a DESIGN.md with no report is an unfinished run, not a finished one.
 
-Then confirm the render survived. The page must show the design's own `title`, not the template's `System design report` placeholder—a mismatch means the JSON never parsed. With a browser tool, load every architecture route and read the hidden `report-diagnostics` element: `data-component-overlaps`, `data-route-collisions`, `data-text-overflows`, and `data-fit-overflows` must all be `0`. Any non-zero value is a `design.json` defect—shorten names, move positions, re-render. Without a browser tool, say the report was rendered but not inspected rather than claiming interactions you cannot see.
+`<skill-dir>` is the directory containing this file, wherever it is installed; the script resolves the template relative to itself, so an absolute path always works:
+
+```bash
+python3 <skill-dir>/scripts/render_report.py \
+  --design docs/design/<slug>/design.json \
+  --out "$TMPDIR/system-design-<slug>.html"
+open "$TMPDIR/system-design-<slug>.html"        # macOS; xdg-open on Linux, start on Windows
+```
+
+If the skill directory is not known, find it rather than skipping the step: `ls ~/.claude/skills/system-design/scripts/render_report.py ~/.agents/skills/system-design/scripts/render_report.py 2>/dev/null` covers both standalone installs, and a plugin install lives under `~/.claude/plugins/cache/`. Never read [assets/report-template.html](assets/report-template.html) into context or rebuild the report by hand; see [HTML-REPORT.md](HTML-REPORT.md). The report must contain only its own title/date chrome—no prototype or harness wrapper.
+
+Then confirm the render survived. The *rendered page* must show the design's own `title` rather than the template's `System design report` placeholder—a mismatch means the JSON never parsed. The title is set at run time, so the static file still contains the placeholder in its `<title>` tag; grep the embedded `application/json` block instead, or check that no `__DESIGN_JSON__` remains. With a browser tool, load every architecture route and read the hidden `report-diagnostics` element: `data-component-overlaps`, `data-route-collisions`, `data-text-overflows`, and `data-fit-overflows` must all be `0`. Any non-zero value is a `design.json` defect—shorten names, move positions, re-render. Without a browser tool, say the report was rendered but not inspected rather than claiming interactions you cannot see.
 
 Iterate through `design.json`, never by hand-editing rendered HTML.
 

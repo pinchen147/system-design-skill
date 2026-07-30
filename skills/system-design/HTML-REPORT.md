@@ -47,8 +47,8 @@ If no opener works—headless box, remote session—print the absolute path and 
 ```jsonc
 {
   "version": 2,
-  "slug": "design-whatsapp",
-  "title": "Design WhatsApp",
+  "slug": "design-messaging",
+  "title": "Design a messaging service",
   "mode": "greenfield",                  // "repo" | "greenfield"
   "status": "draft",                     // "draft" | "decided"
   "decided": null,                       // architecture id once status is "decided"

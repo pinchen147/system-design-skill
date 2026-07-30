@@ -68,7 +68,7 @@ Repository work is the primary path. Greenfield work uses the same process witho
 ## Examples
 
 - [Evolve an existing repository](docs/demos/repository-evolution.md) — reconstruct Architecture 0 from the code, then compare migration-aware evolutions.
-- [Design a greenfield system](docs/demos/greenfield-design.md) — turn a WhatsApp prompt into measurable requirements, capacity math, and complete architectures.
+- [Design a greenfield system](docs/demos/greenfield-design.md) — turn a ticket on-sale prompt into measurable requirements, capacity math, and complete architectures.
 
 ## The complete journey
 
