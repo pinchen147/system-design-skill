@@ -261,6 +261,9 @@ def assert_report_geometry(design_path: Path, route: str) -> str:
         assert diagnostic_value(dom, "route-collisions") == 0
         assert diagnostic_value(dom, "text-overflows") == 0
         assert diagnostic_value(dom, "fit-overflows") == 0
+        # An edge label the placer could not keep clear of a component or of
+        # another label. Unreadable text scored zero before this existed.
+        assert diagnostic_value(dom, "label-occlusions") == 0
         return design.get("title", design_path.stem)
 
 

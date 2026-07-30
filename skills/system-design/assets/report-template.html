@@ -217,7 +217,7 @@ kbd{font:600 .72rem var(--mono);border:1px solid var(--hair);border-bottom-width
 </header>
 <nav class="tabs" id="tabs" role="tablist"></nav>
 <main id="main"></main>
-<output id="report-diagnostics" data-component-overlaps="0" data-route-collisions="0" data-text-overflows="0" data-fit-overflows="0" hidden></output>
+<output id="report-diagnostics" data-component-overlaps="0" data-route-collisions="0" data-text-overflows="0" data-fit-overflows="0" data-label-occlusions="0" hidden></output>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
 <defs id="icon-defs">
@@ -578,7 +578,7 @@ const CLUSTER_META_V2={
   external:{label:"External",fill:"#f3fbf5",stroke:"#abd9b5",text:"#357a40"},
   observability:{label:"Observability",fill:"#f5f6f7",stroke:"#c8ccd1",text:"#626970"}
 };
-const diagnosticsV2={componentOverlaps:0,routeCollisions:0,textOverflows:0,fitOverflows:0};
+const diagnosticsV2={componentOverlaps:0,routeCollisions:0,textOverflows:0,fitOverflows:0,labelOcclusions:0};
 const diagnosticsElementV2=document.getElementById("report-diagnostics");
 function updateDiagnosticsV2(){
   if(!diagnosticsElementV2) return;
@@ -586,6 +586,7 @@ function updateDiagnosticsV2(){
   diagnosticsElementV2.dataset.routeCollisions=String(diagnosticsV2.routeCollisions);
   diagnosticsElementV2.dataset.textOverflows=String(diagnosticsV2.textOverflows);
   diagnosticsElementV2.dataset.fitOverflows=String(diagnosticsV2.fitOverflows);
+  diagnosticsElementV2.dataset.labelOcclusions=String(diagnosticsV2.labelOcclusions);
 }
 const snapV2=value=>Math.round(value/SNAP_V2)*SNAP_V2;
 const sizeForV2=component=>SHAPE_SIZE_V2[component.type]||{w:180,h:108};
@@ -967,11 +968,37 @@ function createComponentNodeV2(component,box){
   }
   return group;
 }
-function edgeLabelV2(label,route,edge){
+function rectsOverlapV2(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+function labelCandidatesV2(longest,width){
+  // Along the segment first, so the label stays on the edge it names; then perpendicular.
+  const out=[],axis=longest.horizontal?"x":"y",cross=longest.horizontal?"y":"x";
+  for(const slide of [0,-0.18,0.18,-0.34,0.34]){
+    for(const push of [0,-18,18,-34,34]){
+      const point={x:longest.point.x,y:longest.point.y};
+      point[axis]+=slide*Math.max(0,longest.length);
+      point[cross]+=push;
+      out.push(point);
+    }
+  }
+  return out;
+}
+function edgeLabelV2(label,route,edge,obstacles,placed){
   const longest=longestSegmentV2(route.points),width=Math.min(240,Math.max(52,label.length*6.15+16));
+  const clearOf=box=>!obstacles.some(o=>rectsOverlapV2(box,o))&&!placed.some(p=>rectsOverlapV2(box,p));
+  let box=null;
+  for(const point of labelCandidatesV2(longest,width)){
+    const candidate={x:point.x-width/2,y:point.y-10,w:width,h:20};
+    if(clearOf(candidate)){box=candidate;break;}
+  }
+  if(!box){
+    // Nothing clean anywhere: keep it on the edge and record that it is occluded.
+    box={x:longest.point.x-width/2,y:longest.point.y-10,w:width,h:20};
+    diagnosticsV2.labelOcclusions++;
+  }
+  placed.push(box);
   const group=el("g",{class:"edge-label "+(edge.importance==="primary"?"primary":"secondary"),"data-from":edge.from,"data-to":edge.to});
-  group.appendChild(el("rect",{x:longest.point.x-width/2,y:longest.point.y-10,width,height:20,rx:4}));
-  const text=el("text",{x:longest.point.x,y:longest.point.y+3.5});text.textContent=label;group.appendChild(text);return group;
+  group.appendChild(el("rect",{x:box.x,y:box.y,width:box.w,height:box.h,rx:4}));
+  const text=el("text",{x:box.x+box.w/2,y:box.y+13.5});text.textContent=label;group.appendChild(text);return group;
 }
 function createCameraV2(viewport,svg,bounds){
   let state={x:0,y:0,w:bounds.w,h:bounds.h},fitScale=1,interacted=false,didPan=false;
@@ -1109,6 +1136,7 @@ function renderArchV2(sec,architecture){
 
   const edgeLayer=el("g",{class:"edge-layer"});
   const edgeLabelLayer=el("g",{class:"edge-label-layer"});
+  const labelledEdges=[];
   for(const edge of edges){
     const route=routes.get(`${edge.from}->${edge.to}`);
     if(!route) continue;
@@ -1129,10 +1157,9 @@ function renderArchV2(sec,architecture){
         "data-to":edge.to
       }));
     }
-    if(edge.label) edgeLabelLayer.appendChild(edgeLabelV2(edge.label,route,edge));
+    if(edge.label) labelledEdges.push({edge,route});
   }
   svg.appendChild(edgeLayer);
-  svg.appendChild(edgeLabelLayer);
 
   const componentLayer=el("g",{class:"component-layer"});
   for(const component of components){
@@ -1140,6 +1167,21 @@ function renderArchV2(sec,architecture){
     if(box) componentLayer.appendChild(createComponentNodeV2(component,box));
   }
   svg.appendChild(componentLayer);
+
+  // Edge labels paint last, so a component can never cover one, and each is
+  // placed clear of the components and of the labels already down.
+  const labelObstacles=[];
+  for(const component of components){
+    const box=layoutV2.boxes.get(component.id);
+    if(box) labelObstacles.push(box);
+  }
+  const placedLabels=[];
+  for(const item of labelledEdges){
+    edgeLabelLayer.appendChild(edgeLabelV2(item.edge.label,item.route,item.edge,labelObstacles,placedLabels));
+  }
+  svg.appendChild(edgeLabelLayer);
+  updateDiagnosticsV2();
+
   const flowLayer=el("g",{class:"flow-layer"});
   svg.appendChild(flowLayer);
   viewport.insertBefore(svg,viewport.firstChild);
