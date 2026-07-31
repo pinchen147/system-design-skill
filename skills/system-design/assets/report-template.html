@@ -104,7 +104,10 @@ ul.plain li{margin:.3rem 0}
 .legend .ek{display:inline-flex;align-items:center;gap:.35rem}
 .legend svg{display:inline}
 .arch-shell{display:grid;grid-template-columns:minmax(0,1fr) 280px;height:clamp(580px,72vh,860px);border:1px solid var(--hair);border-radius:3px;background:var(--paper);overflow:hidden}
-.canvas-viewport{position:relative;min-width:0;overflow:hidden;touch-action:none;background-color:#fff;background-image:radial-gradient(#dfe3e7 .7px,transparent .7px);background-size:20px 20px}
+.canvas-viewport{position:relative;min-width:0;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;background-color:#fff;background-image:radial-gradient(#dfe3e7 .7px,transparent .7px);background-size:20px 20px}
+/* A drag that escapes the viewport must not start selecting the page behind it.
+   Scoped to the panning state so sidebar and report text stay selectable. */
+body:has(svg.is-panning){-webkit-user-select:none;user-select:none}
 .canvas-toolbar{position:absolute;z-index:8;top:.65rem;right:.65rem;display:flex;gap:.35rem}
 .canvas-toolbar button{min-width:2.2rem;padding:.4rem .58rem;border:1px solid var(--hair);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgb(0 0 0/.08);font:600 .78rem var(--sans)}
 .canvas-toolbar button:hover{border-color:var(--rule);background:var(--surface)}
@@ -969,29 +972,64 @@ function createComponentNodeV2(component,box){
   return group;
 }
 function rectsOverlapV2(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
-function labelCandidatesV2(longest,width){
-  // Along the segment first, so the label stays on the edge it names; then perpendicular.
-  const out=[],axis=longest.horizontal?"x":"y",cross=longest.horizontal?"y":"x";
-  for(const slide of [0,-0.18,0.18,-0.34,0.34]){
-    for(const push of [0,-18,18,-34,34]){
-      const point={x:longest.point.x,y:longest.point.y};
-      point[axis]+=slide*Math.max(0,longest.length);
-      point[cross]+=push;
-      out.push(point);
+function labelCandidatesV2(route){
+  // Every segment of the route is a legitimate home for the label, longest
+  // first so the default stays where a reader expects it. Within a segment,
+  // slide along it before pushing off it, so the label stays on its own edge.
+  const segments=[];
+  for(let index=1;index<route.points.length;index++){
+    const a=route.points[index-1],b=route.points[index],length=segmentLengthV2(a,b);
+    if(length<24) continue;
+    segments.push({a,b,length,horizontal:Math.abs(a.y-b.y)<Math.abs(a.x-b.x)});
+  }
+  segments.sort((p,q)=>q.length-p.length);
+  const out=[];
+  for(const segment of segments){
+    const axis=segment.horizontal?"x":"y",cross=segment.horizontal?"y":"x";
+    const mid={x:(segment.a.x+segment.b.x)/2,y:(segment.a.y+segment.b.y)/2};
+    for(const push of [0,-16,16,-30,30,-44,44]){
+      for(const slide of [0,-0.2,0.2,-0.35,0.35,-0.45,0.45]){
+        const point={x:mid.x,y:mid.y};
+        point[axis]+=slide*segment.length;
+        point[cross]+=push;
+        out.push(point);
+      }
     }
   }
-  return out;
+  return out.length?out:[route.points[0]||{x:0,y:0}];
 }
 function edgeLabelV2(label,route,edge,obstacles,placed){
   const longest=longestSegmentV2(route.points),width=Math.min(240,Math.max(52,label.length*6.15+16));
   const clearOf=box=>!obstacles.some(o=>rectsOverlapV2(box,o))&&!placed.some(p=>rectsOverlapV2(box,p));
   let box=null;
-  for(const point of labelCandidatesV2(longest,width)){
+  for(const point of labelCandidatesV2(route)){
     const candidate={x:point.x-width/2,y:point.y-10,w:width,h:20};
     if(clearOf(candidate)){box=candidate;break;}
   }
   if(!box){
-    // Nothing clean anywhere: keep it on the edge and record that it is occluded.
+    // Still nothing. Walk perpendicular off the longest segment in both
+    // directions until the label clears everything; dense diagrams have room
+    // further out than the fixed grid reaches.
+    const axis=longest.horizontal?"y":"x";
+    for(let distance=16;distance<=200&&!box;distance+=8){
+      for(const sign of [-1,1]){
+        const point={x:longest.point.x,y:longest.point.y};
+        point[axis]+=sign*distance;
+        const candidate={x:point.x-width/2,y:point.y-10,w:width,h:20};
+        if(clearOf(candidate)){box=candidate;break;}
+      }
+    }
+  }
+  if(!box){
+    // Take whatever clears the components even if it touches another label — a
+    // label over a label stays readable once either moves; one under a
+    // component never does.
+    for(const point of labelCandidatesV2(route)){
+      const candidate={x:point.x-width/2,y:point.y-10,w:width,h:20};
+      if(!obstacles.some(o=>rectsOverlapV2(candidate,o))){box=candidate;break;}
+    }
+  }
+  if(!box){
     box={x:longest.point.x-width/2,y:longest.point.y-10,w:width,h:20};
     diagnosticsV2.labelOcclusions++;
   }
@@ -1032,8 +1070,12 @@ function createCameraV2(viewport,svg,bounds){
   viewport.addEventListener("wheel",event=>{event.preventDefault();zoomAt(event.clientX,event.clientY,Math.exp(-event.deltaY*.0015));},{passive:false});
   viewport.addEventListener("pointerdown",event=>{
     if(event.target.closest(".comp")||event.target.closest("button")) return;
+    // Without this the browser starts a native text selection on drag, which
+    // highlights the diagram labels and then the legend and sidebar with it.
+    event.preventDefault();
     pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});viewport.setPointerCapture(event.pointerId);svg.classList.add("is-panning");didPan=false;
   });
+  viewport.addEventListener("dragstart",event=>event.preventDefault());
   viewport.addEventListener("pointermove",event=>{
     const previous=pointers.get(event.pointerId);if(!previous) return;
     pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});

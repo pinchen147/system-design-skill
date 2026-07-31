@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 RENDER_SCRIPT = ROOT / "skills/system-design/scripts/render_report.py"
-DEFAULT_DESIGN = ROOT / "examples/design-whatsapp/design.json"
+DEFAULT_DESIGN = ROOT / "examples/design-ticketing/design.json"
 PLACEHOLDER_TITLE = "System design report"
 CHROME_CANDIDATES = (
     Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
@@ -116,36 +116,40 @@ def assert_v2_content(dom: str, design: dict) -> None:
     assert rendered_schemas.count('class="schema-card"') == len(expected_schemas), (
         "rendered schema card count does not match design data"
     )
-    for value in (
-        "Database schemas",
-        "Message",
-        "conversationId",
-        "partition key",
-        "senderId → User.id",
-        "(conversationId, acceptedSequence DESC)",
-        "DeviceResumeCursor",
-        "monotonic cursor",
-    ):
-        assert value in rendered_schemas, f"missing rendered database schema value {value!r}"
+    assert "Database schemas" in rendered_schemas, "missing schema section heading"
+    # Assert against the design's own schemas rather than one fixture's domain
+    # words, so a second example can pass without borrowing the first's nouns.
+    for schema in expected_schemas:
+        assert schema["name"] in rendered_schemas, (
+            f"schema {schema['name']!r} is in the design but not rendered"
+        )
+        for field in schema.get("fields", [])[:3]:
+            name = field["name"] if isinstance(field, dict) else str(field)
+            assert name in rendered_schemas, (
+                f"field {name!r} of schema {schema['name']!r} is not rendered"
+            )
     top3 = design["requirements"]["priorities"]["top3"]
     assert len(top3) == 3, f"requirements.priorities.top3 must name three axes, got {top3}"
     for axis in top3:
         assert axis in dom, f"top-three characteristic {axis!r} is not shown in the report"
 
 
-def assert_interface_contracts(dom: str) -> None:
+def assert_interface_contracts(dom: str, design: dict) -> None:
     for label in ("Deadline / retry", "Trust / pressure", "Failure / compatibility"):
         assert label in dom, f"missing interface contract label {label!r}"
-    for value in (
-        "bidirectional command",
-        "sender device → connection gateway",
-        "3 s to durable acceptance",
-        "retry with the same clientMessageId after reconnect",
-        "UNKNOWN",
-        "server overload closes with 1013; client reconnects with jitter",
-        "additive fields only within v1; ignore unknown fields",
-    ):
-        assert value in dom, f"missing concrete interface contract value {value!r}"
+    interfaces = design.get("interfaces", [])
+    assert interfaces, "design declares no interfaces"
+    # Every interface must reach the page with its own contract values, rather
+    # than the page merely containing one fixture's strings.
+    for interface in interfaces:
+        assert interface["name"] in dom, f"interface {interface['name']!r} is not rendered"
+        contract = interface.get("contract") or {}
+        for key in ("deadline", "retryOwner", "failureMode", "compatibility"):
+            value = contract.get(key)
+            if isinstance(value, str) and value.strip():
+                assert value in dom, (
+                    f"interface {interface['name']!r} contract {key} is not rendered"
+                )
 
 
 def inspector_body(dom: str, route: str) -> str:
@@ -183,15 +187,36 @@ def assert_architecture_contracts(report_path: Path, design: dict, route: str) -
             )
         else:
             raise AssertionError(f"invalid state role on {component['id']}: {state.get('role')!r}")
-    if route == "a":
-        inspections = {
-            "queue": ("State contract", "Acknowledgement", "Failure domain", "quorum durable enqueue", "Retry owner", "Backlog bound", "2 s durable handoff before ack"),
-        }
-    else:
-        inspections = {
-            "log": ("State contract", "Acknowledgement", "Failure domain", "quorum fsync of the conversation partition", "Retry owner", "Backlog bound"),
-            "msgstore": ("State contract", "Acknowledgement", "Failure domain", "idempotent message commit", "RPO", "RTO"),
-        }
+    # Derive what to inspect from the design rather than naming components, so
+    # this validates any design and not just the example it was written against.
+    def first_with(role: str) -> dict | None:
+        return next(
+            (
+                component
+                for component in architecture["components"]
+                if component.get("type") in stateful_types
+                and (component.get("state") or {}).get("role") == role
+            ),
+            None,
+        )
+
+    inspections: dict[str, tuple[str, ...]] = {}
+    authoritative = first_with("authoritative")
+    if authoritative:
+        state = authoritative["state"]
+        inspections[authoritative["id"]] = (
+            "State contract",
+            "Acknowledgement",
+            "Failure domain",
+            state["acknowledgement"],
+            state["failureDomain"],
+        )
+    derived = first_with("derived")
+    if derived:
+        state = derived["state"]
+        inspections[derived["id"]] = ("State contract", state["source"], state["cursor"])
+    assert inspections, f"architecture {route} has no stateful component to inspect"
+
     for component_id, expected in inspections.items():
         rendered_inspector = inspector_body(
             run_chrome(report_path, route, component_id), route
@@ -256,7 +281,7 @@ def assert_report_geometry(design_path: Path, route: str) -> str:
         assert 'class="flow-sidebar"' in dom, "missing permanent flow sidebar"
         assert_not_corrupted(dom, design)
         assert_v2_content(dom, design)
-        assert_interface_contracts(dom)
+        assert_interface_contracts(dom, design)
         assert diagnostic_value(dom, "component-overlaps") == 0
         assert diagnostic_value(dom, "route-collisions") == 0
         assert diagnostic_value(dom, "text-overflows") == 0

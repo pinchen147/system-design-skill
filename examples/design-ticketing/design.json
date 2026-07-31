@@ -133,7 +133,7 @@
         "resolution": "reserve a 68 s payment window inside every hold and refuse to start a checkout below it; 11.3% of every hold is spent buying the elimination of that entire failure class"
       },
       {
-        "text": "fans picking their own seats conflicts with a fixed 300/s budget — contention at 20% concentration on one block costs ~14 aborted writes/s, and an aborted conditional UPDATE still spends a lock acquisition",
+        "text": "fans picking their own seats conflicts with a fixed 300/s budget — contention at 20% concentration on one seating block costs ~14 aborted writes/s, and an aborted conditional UPDATE still spends a lock acquisition",
         "resolution": "degrade to server-assigned best-available within tier during the rush; seat choice re-enables when AVAILABLE exceeds 25% of inventory and admission pressure drops below the residual budget"
       },
       {
@@ -361,7 +361,7 @@
       {
         "metric": "queue store footprint",
         "value": "200 MB",
-        "derivation": "2,000,000 entries × ~100 B in one sorted set — one node holds it, but never one node"
+        "derivation": "2,000,000 entries × ~100 B in one sorted set — one instance holds it, but never one instance"
       },
       {
         "metric": "storage",
@@ -552,7 +552,7 @@
           {
             "name": "event_id",
             "type": "ID",
-            "key": "primary key part 1",
+            "key": "partition key, and primary key part 1",
             "references": "Event.id"
           },
           {
@@ -988,7 +988,7 @@
           "seed_id → the published draw seed retained 1 year for dispute"
         ],
         "notes": [
-          "2,000,000 members at ~100 B is 200 MB — one node holds it, but never one node: append-only file every second plus a replica.",
+          "2,000,000 members at ~100 B is 200 MB — one instance holds it, but never one instance: append-only file every second plus a replica.",
           "Rebuilt from the seed and the ordered snapshot; losing both costs a re-draw with a newly published seed, which is a product and PR event with zero financial exposure.",
           "No money and no seat depends on this store. Positions are auditable, not authoritative.",
           "Deleted 7 days after the event; the seed and the ordered position list retained 1 year."
@@ -1083,7 +1083,7 @@
       "alternatives": [
         "fixed budget shares such as 40/20/40 — arbitrary, and starves finalization under a reaping wave",
         "an explicit held-inventory guard — falsified by simulation: a guard at 60% or 35% of unsold inventory moved t95 from 1,482 s to 2,099 s and 3,310 s, because in the tail the constraint is inventory availability, not throughput",
-        "optimistic per-seat conditional updates with fan-chosen seats at peak — ~14 aborted writes/s at 20% concentration, and an abort still spends a lock acquisition against a fixed budget",
+        "optimistic per-seat conditional updates with fan-chosen seats at peak — ~14 aborted writes/s at 20% concentration on one seating block, and an abort still spends a lock acquisition against a fixed budget",
         "raising the writer — forbidden as a measurement, and worth only 12.1% of the tail even if it were free"
       ],
       "failureMode": "Reaper starvation under a finalization wave: expired holds accumulate, AVAILABLE goes to zero, and new admissions stop while thousands of seats are notionally free. Detected by reap_backlog_seconds, the age of the oldest expired-but-unreaped hold, paged at 30 s. Mitigated by promoting the reaper above finalization once the backlog exceeds 60 s — an explicit, alarmed priority inversion rather than an emergent one.",
@@ -1124,7 +1124,7 @@
       "decision": "One request per fan for the entire wait, returning a position, a seed id, and a signed token. A seeded published draw rather than FIFO by arrival millisecond, which rewards fast networks and bots. Reject 94% in the first minute with a signed terminal payload rendered client-side and never retried. The remaining ~120,000 poll one shared cached object carrying now_serving, drain_rate, seat_version, and server_time at a 1 s TTL, and compute their own estimate locally. Admission is decided at the edge by a local signature check with zero network calls. The admission unit is a seat-token lease denominated in AVAILABLE inventory, which is the one quota no gateway or mesh can express — everything else is bought configuration.",
       "alternatives": [
         "a per-fan position endpoint — 4x to 8x the entire read budget before a seat is touched",
-        "server-sent events or WebSockets to 2M fans — 20 GB of connection state, ~20 gateway boxes for a ten-minute event, and a reconnect-storm surface at exactly the worst moment, to deliver a message that changes every few tens of seconds",
+        "server-sent events or WebSockets to 2M fans — 20 GB of connection state, ~20 gateway hosts for a ten-minute event, and a reconnect-storm surface at exactly the worst moment, to deliver a message that changes every few tens of seconds",
         "a 40 s poll interval that arithmetically fits the budget — unusable as UX and still consumes 100% of it on queue polling alone",
         "FIFO by arrival timestamp — fails the fairness requirement and cannot be defended in a dispute",
         "telling rejected fans at sell-out instead of at t≈60 s — converts the answer into a 1,880,000-request thundering herd at the moment the system is most loaded"
@@ -1921,6 +1921,1491 @@
         "simplicity": 4,
         "testability": 4
       }
+    },
+    {
+      "id": "b",
+      "name": "Per-tier partitioned allocator with in-memory seat authority",
+      "style": "space-based",
+      "thesis": "Seat authority is split six ways by price tier and moved into memory behind a replicated log, so the invariants that span tiers — the per-account limit and a multi-tier basket — stop being local constraints and become an escrow protocol across partitions.",
+      "canvas": {
+        "primaryFlow": "hold"
+      },
+      "components": [
+        {
+          "id": "client",
+          "name": "Fan client",
+          "type": "mobile",
+          "zone": "edge",
+          "position": {
+            "x": 160,
+            "y": 260
+          },
+          "note": "identical to the other candidates: renders NOT_SELECTED locally, releases holds explicitly"
+        },
+        {
+          "id": "cdn",
+          "name": "CDN + edge worker",
+          "type": "cdn",
+          "zone": "edge",
+          "position": {
+            "x": 440,
+            "y": 260
+          },
+          "tech": "50 POPs",
+          "note": "derived: static shell, shared drain front, versioned seat bitmap, local admission-token verification",
+          "state": {
+            "role": "derived",
+            "source": "the bitmap projector's versioned objects and the admission controller's drain front",
+            "cursor": "seat_version in the immutable URL path; a 1 s TTL pointer object names the current version",
+            "recovery": "invalidation by key change, never a purge; a cold cache refills at up to 5,000 QPS"
+          }
+        },
+        {
+          "id": "waitroom",
+          "name": "Waiting-room service",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 720,
+            "y": 260
+          },
+          "note": "unchanged from candidate A — the door is not where this candidate differs"
+        },
+        {
+          "id": "admission",
+          "name": "Admission controller",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1000,
+            "y": 260
+          },
+          "note": "must now add the held-inventory guard that A proved unnecessary, because 1,800/s fills the venue with holds in ~33 s"
+        },
+        {
+          "id": "basket",
+          "name": "Basket coordinator",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1280,
+            "y": 260
+          },
+          "note": "escrow across tier authorities for a multi-tier basket: a saga over inventory with no isolation, and the component that exists only because the partitioning created the problem"
+        },
+        {
+          "id": "pay-adapter",
+          "name": "Payment adapter",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1560,
+            "y": 260
+          },
+          "note": "570-deep pool; now sits outside every seat authority, so finalization is a cross-authority commit with a non-compensable money step"
+        },
+        {
+          "id": "psp",
+          "name": "Payment provider",
+          "type": "external",
+          "zone": "external",
+          "position": {
+            "x": 1840,
+            "y": 260
+          },
+          "note": "unchanged third party: no ordering, no exactly-once, 57 auth/s and a 570-deep ceiling to confirm"
+        },
+        {
+          "id": "objstore",
+          "name": "Draw seed store",
+          "type": "blob",
+          "zone": "data",
+          "position": {
+            "x": 160,
+            "y": 520
+          },
+          "note": "authoritative for audit only: the published draw seed and the ordered position list",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "checksum-verified replicated object completion before the draw is declared closed",
+            "failureDomain": "provider-managed multi-zone replicas",
+            "rpo": "0 — the seed is written once and never mutated",
+            "rto": "< 5 min zonal; < 60 min regional",
+            "recovery": "version restore; the ordered list is re-derivable from the seed"
+          }
+        },
+        {
+          "id": "queue-store",
+          "name": "Queue store",
+          "type": "cache",
+          "zone": "data",
+          "position": {
+            "x": 720,
+            "y": 520
+          },
+          "tech": "sorted set, AOF everysec + replica",
+          "note": "derived: 200 MB of positions; unchanged from candidate A",
+          "state": {
+            "role": "derived",
+            "source": "the published draw seed and the ordered position snapshot",
+            "cursor": "seed_id plus the highest position written",
+            "recovery": "replica promotion or rebuild from the snapshot; losing both costs a re-draw"
+          }
+        },
+        {
+          "id": "limit-svc",
+          "name": "Account limit service",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1000,
+            "y": 520
+          },
+          "note": "holds the cross-tier per-account aggregate that candidate A enforced as one database constraint; a limiter that can be lost cannot enforce an invariant, so this is the weakest point in the candidate"
+        },
+        {
+          "id": "tier-auth",
+          "name": "Tier seat authorities",
+          "type": "db-nosql",
+          "zone": "data",
+          "position": {
+            "x": 1280,
+            "y": 520
+          },
+          "tech": "6 in-memory authorities, one per tier",
+          "note": "authoritative seat state in memory behind a replicated log; each reaps its own expired holds, and reads of seat state never touch a database",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "quorum append to the replicated seat log, then apply to the in-memory state — the fan is told the seat is theirs after the log quorum",
+            "failureDomain": "each tier's leader and two followers in independently powered availability zones",
+            "rpo": "0 for one-zone loss, provided the log quorum survives; ≤ 60 s regionally from archived log segments",
+            "rto": "recovery is snapshot age plus replay rate and must be published — this is a number candidate A never has to own",
+            "recovery": "fenced leader election per tier, restore the newest snapshot by sequence number, then replay the log tail; six independent elections, not one"
+          }
+        },
+        {
+          "id": "webhook",
+          "name": "Webhook receiver",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1840,
+            "y": 520
+          },
+          "note": "unchanged: verify, store raw, acknowledge in under 1 s, process async"
+        },
+        {
+          "id": "replicas",
+          "name": "Read replicas",
+          "type": "db-sql",
+          "zone": "data",
+          "position": {
+            "x": 440,
+            "y": 760
+          },
+          "tech": "3 async replicas",
+          "note": "derived: serve personalised order and payment reads; seat reads now come from the tier authorities instead",
+          "state": {
+            "role": "derived",
+            "source": "the core database's write-ahead log",
+            "cursor": "replay LSN, alarmed above 1 s of lag",
+            "recovery": "re-stream from the primary or rebuild from a base backup"
+          }
+        },
+        {
+          "id": "seat-log",
+          "name": "Replicated seat log",
+          "type": "stream",
+          "zone": "async",
+          "position": {
+            "x": 1280,
+            "y": 760
+          },
+          "note": "authoritative durable record of every seat transition; the in-memory authorities are a materialised view of it and the snapshotter checkpoints by sequence number",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "quorum fsync of the tier's partition; this is the durability point the fan's acknowledgement waits on",
+            "failureDomain": "three independently powered zones per partition",
+            "rpo": "0 zonal; ≤ 60 s regional from archived segments",
+            "rto": "< 60 s leader election per partition; < 30 min regional replay",
+            "recovery": "fenced leader election, then replay from the newest snapshot's sequence number — recovery time is snapshot age plus replay rate"
+          }
+        },
+        {
+          "id": "coredb",
+          "name": "Core database",
+          "type": "db-sql",
+          "zone": "data",
+          "position": {
+            "x": 1560,
+            "y": 760
+          },
+          "tech": "primary + synchronous standby",
+          "note": "authoritative for order, payment, payment_event, ledger_entry, and outbox — but no longer for seats, so money and inventory now live in different authorities",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "local WAL fsync plus synchronous apply acknowledgement from a same-region standby",
+            "failureDomain": "primary and synchronous standby in independently powered availability zones",
+            "rpo": "0 for one-zone loss; ≤ 60 s for whole-region loss",
+            "rto": "15-30 s automated zonal failover; ≤ 30 min regional restore",
+            "recovery": "fenced promotion, then the reconciler resolves every non-terminal order — and additionally every escrow left open across the tier authorities"
+          }
+        },
+        {
+          "id": "reconciler",
+          "name": "Reconciler",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 1840,
+            "y": 760
+          },
+          "note": "owns UNKNOWN, both money sweeps, and a third job A does not have: reconciling escrow state between the tier authorities and the core database"
+        },
+        {
+          "id": "projector",
+          "name": "Bitmap projector",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 720,
+            "y": 1000
+          },
+          "note": "tails all six tier partitions and merges them into one versioned bitmap; merge order across partitions is its own correctness question"
+        },
+        {
+          "id": "outbox-relay",
+          "name": "Outbox relay",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 1280,
+            "y": 1000
+          },
+          "note": "unchanged: tails the outbox and publishes at least once, keyed by outbox_id"
+        },
+        {
+          "id": "broker",
+          "name": "Event broker",
+          "type": "stream",
+          "zone": "async",
+          "position": {
+            "x": 1560,
+            "y": 1000
+          },
+          "note": "derived from the outbox; at-least-once, partitioned by order_id",
+          "state": {
+            "role": "derived",
+            "source": "the outbox table in the core database",
+            "cursor": "consumer offsets plus the relay's last published outbox_id",
+            "recovery": "replay retained segments or re-publish from the outbox"
+          }
+        },
+        {
+          "id": "notifier",
+          "name": "Delivery worker",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 1840,
+            "y": 1000
+          },
+          "note": "unchanged: one retrying outbox-driven worker for entitlement email and wallet"
+        }
+      ],
+      "edges": [
+        {
+          "from": "client",
+          "to": "cdn",
+          "kind": "sync",
+          "label": "shell + drain front",
+          "importance": "primary",
+          "contract": {
+            "deadline": "300 ms at the edge",
+            "retryOwner": "client, jittered, budget 20% of active with a floor of 3",
+            "backlogBound": "1 s TTL with request collapsing per POP; cacheable 429 above the POP limit"
+          }
+        },
+        {
+          "from": "cdn",
+          "to": "waitroom",
+          "kind": "sync",
+          "label": "join the draw",
+          "contract": {
+            "deadline": "2 s",
+            "retryOwner": "client on 429 and 5xx, idempotent by account",
+            "backlogBound": "gateway concurrency limit sized for 33,333 req/s over 60 s; shed with a cacheable 429"
+          }
+        },
+        {
+          "from": "waitroom",
+          "to": "queue-store",
+          "kind": "sync",
+          "label": "one position write",
+          "contract": {
+            "deadline": "100 ms",
+            "retryOwner": "waiting-room service, once",
+            "backlogBound": "one write per account; 2,000,000 members and 200 MB"
+          }
+        },
+        {
+          "from": "waitroom",
+          "to": "objstore",
+          "kind": "async",
+          "label": "seed + ordered list",
+          "contract": {
+            "deadline": "snapshot durable within 60 s of the draw closing",
+            "retryOwner": "waiting-room service, exponential backoff until durable",
+            "backlogBound": "one snapshot per event; the draw is not closed until it lands"
+          }
+        },
+        {
+          "from": "cdn",
+          "to": "admission",
+          "kind": "sync",
+          "label": "present token",
+          "importance": "primary",
+          "contract": {
+            "deadline": "200 ms",
+            "retryOwner": "none — fail closed with a 429",
+            "backlogBound": "lease pool plus a held-inventory guard capped at 60% of unsold seats, which A does not need and this candidate cannot omit"
+          }
+        },
+        {
+          "from": "admission",
+          "to": "cdn",
+          "kind": "async",
+          "label": "drain front",
+          "contract": {
+            "deadline": "1 s maximum age; 'checking' past 30 s",
+            "retryOwner": "admission controller, next tick",
+            "backlogBound": "one object in flight; a late publish is skipped"
+          }
+        },
+        {
+          "from": "admission",
+          "to": "basket",
+          "kind": "sync",
+          "label": "open a basket",
+          "importance": "primary",
+          "contract": {
+            "deadline": "300 ms",
+            "retryOwner": "admission controller, once",
+            "backlogBound": "open escrows capped at 5,000; above it, admission is refused rather than escrows queued"
+          }
+        },
+        {
+          "from": "basket",
+          "to": "limit-svc",
+          "kind": "sync",
+          "label": "reserve account quota",
+          "importance": "primary",
+          "contract": {
+            "deadline": "150 ms",
+            "retryOwner": "basket coordinator, once, then fail closed",
+            "backlogBound": "one reservation per (account, event); leaked reservations expire at 600 s and are swept by the reconciler"
+          }
+        },
+        {
+          "from": "basket",
+          "to": "tier-auth",
+          "kind": "sync",
+          "label": "escrow N seats per tier",
+          "importance": "primary",
+          "contract": {
+            "deadline": "300 ms per tier, 600 ms for the whole basket",
+            "retryOwner": "basket coordinator, once per tier, then compensate the tiers that succeeded",
+            "backlogBound": "escrow slots per tier bounded by that tier's AVAILABLE count; partial baskets are visible to other readers until compensation lands"
+          }
+        },
+        {
+          "from": "tier-auth",
+          "to": "seat-log",
+          "kind": "stream",
+          "label": "append transition",
+          "importance": "primary",
+          "contract": {
+            "deadline": "quorum append within 200 ms before the fan is acknowledged",
+            "retryOwner": "the tier leader, until quorum or fencing",
+            "backlogBound": "7-day segment retention per partition; the producer blocks then sheds at the provisioned byte cap"
+          }
+        },
+        {
+          "from": "basket",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "record order and escrow",
+          "contract": {
+            "deadline": "500 ms per transaction",
+            "retryOwner": "basket coordinator, once, by effect key",
+            "backlogBound": "in-flight cap 300; escrow rows are the reconciler's input when a commit is left half-applied"
+          }
+        },
+        {
+          "from": "cdn",
+          "to": "pay-adapter",
+          "kind": "sync",
+          "label": "submit checkout",
+          "importance": "primary",
+          "contract": {
+            "deadline": "68 s end to end; refused below that remaining hold life",
+            "retryOwner": "client with the same idempotency key",
+            "backlogBound": "admission throttles at the lease pool; slow payments queue as unadmitted fans"
+          }
+        },
+        {
+          "from": "pay-adapter",
+          "to": "psp",
+          "kind": "sync",
+          "label": "authorize / capture",
+          "importance": "primary",
+          "contract": {
+            "deadline": "12 s, the p99 plus 50%",
+            "retryOwner": "nobody — a timeout becomes UNKNOWN and the reconciler queries it",
+            "backlogBound": "570-deep pool; overflow sheds at the adapter, never at a seat authority"
+          }
+        },
+        {
+          "from": "pay-adapter",
+          "to": "tier-auth",
+          "kind": "sync",
+          "label": "commit the escrow to SOLD",
+          "importance": "primary",
+          "contract": {
+            "deadline": "300 ms per tier",
+            "retryOwner": "payment adapter, twice, then the reconciler owns it",
+            "backlogBound": "one commit per escrow; a money step that has already captured cannot be compensated, only reversed"
+          }
+        },
+        {
+          "from": "pay-adapter",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "order, ledger, outbox",
+          "contract": {
+            "deadline": "500 ms per transaction",
+            "retryOwner": "payment adapter, once, by effect key",
+            "backlogBound": "in-flight cap 300"
+          }
+        },
+        {
+          "from": "psp",
+          "to": "webhook",
+          "kind": "async",
+          "label": "authorized / captured",
+          "contract": {
+            "deadline": "acknowledged in under 1 s or the provider's retry schedule amplifies delivery",
+            "retryOwner": "the provider, on its own schedule",
+            "backlogBound": "84,783 deliveries per on-sale; processing queue depth-capped at 10,000 with age-based shedding"
+          }
+        },
+        {
+          "from": "webhook",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "store raw, advance by rank",
+          "contract": {
+            "deadline": "1 s",
+            "retryOwner": "webhook receiver, twice, then let the provider redeliver",
+            "backlogBound": "stateless receiver; 10,000-deep processing queue sheds by age"
+          }
+        },
+        {
+          "from": "reconciler",
+          "to": "tier-auth",
+          "kind": "sync",
+          "label": "sweep open escrows",
+          "contract": {
+            "deadline": "1 s per tier query",
+            "retryOwner": "reconciler, exponential backoff",
+            "backlogBound": "open escrows older than 600 s, alarmed above 100 — a class of work candidate A does not generate"
+          }
+        },
+        {
+          "from": "reconciler",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "resolve UNKNOWN, both sweeps",
+          "contract": {
+            "deadline": "1 s per sweep query",
+            "retryOwner": "reconciler, exponential backoff",
+            "backlogBound": "orphan-capture sweep every 60 s over the last 24 h; open UNKNOWN alarmed above 50"
+          }
+        },
+        {
+          "from": "reconciler",
+          "to": "pay-adapter",
+          "kind": "sync",
+          "label": "query by attempt-invariant key",
+          "contract": {
+            "deadline": "5 s",
+            "retryOwner": "reconciler, exponential backoff to a 5-minute SLA, then force-void",
+            "backlogBound": "bounded by the open UNKNOWN count; lowest priority on the 570-deep pool"
+          }
+        },
+        {
+          "from": "coredb",
+          "to": "replicas",
+          "kind": "async",
+          "label": "streaming replication",
+          "contract": {
+            "deadline": "replica lag under 1 s",
+            "retryOwner": "each replica, re-streaming from its own LSN",
+            "backlogBound": "WAL retention of 8 GB; beyond it, rebuild from a base backup"
+          }
+        },
+        {
+          "from": "cdn",
+          "to": "replicas",
+          "kind": "sync",
+          "label": "own order and payment",
+          "contract": {
+            "deadline": "300 ms",
+            "retryOwner": "client on 429 and 5xx",
+            "backlogBound": "7,500 QPS across 3 replicas at ~2,500 each; 429 above it"
+          }
+        },
+        {
+          "from": "seat-log",
+          "to": "projector",
+          "kind": "stream",
+          "label": "tail six partitions",
+          "contract": {
+            "deadline": "1 s maximum age across all six partitions",
+            "retryOwner": "bitmap projector, from its committed offset per partition",
+            "backlogBound": "7-day retention; one merged projection in flight and a late version is skipped"
+          }
+        },
+        {
+          "from": "projector",
+          "to": "cdn",
+          "kind": "async",
+          "label": "merged bitmap",
+          "contract": {
+            "deadline": "1 s maximum age",
+            "retryOwner": "bitmap projector, next tick",
+            "backlogBound": "one object per merged version; immutable URLs expire naturally"
+          }
+        },
+        {
+          "from": "coredb",
+          "to": "outbox-relay",
+          "kind": "sync",
+          "label": "poll outbox",
+          "contract": {
+            "deadline": "5 s",
+            "retryOwner": "outbox relay, exponential backoff",
+            "backlogBound": "outbox depth alarmed at 10,000 rows"
+          }
+        },
+        {
+          "from": "outbox-relay",
+          "to": "broker",
+          "kind": "async",
+          "label": "publish by outbox_id",
+          "contract": {
+            "deadline": "5 s handoff",
+            "retryOwner": "outbox relay, exponential backoff; consumers dedup on outbox_id",
+            "backlogBound": "outbox depth alarmed at 10,000; the broker retains 7 days"
+          }
+        },
+        {
+          "from": "broker",
+          "to": "notifier",
+          "kind": "async",
+          "label": "entitlement delivery",
+          "contract": {
+            "deadline": "under 60 s of age",
+            "retryOwner": "delivery worker, keyed on a unique (order_id, template) send record",
+            "backlogBound": "24 h retention, then dropped"
+          }
+        }
+      ],
+      "flows": [
+        {
+          "id": "hold",
+          "name": "Select and hold across tiers",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "cdn",
+              "to": "admission",
+              "label": "present token",
+              "note": "the door is unchanged from A; the guard behind it is not"
+            },
+            {
+              "seq": 2,
+              "from": "admission",
+              "to": "basket",
+              "label": "open a basket",
+              "note": "a 2-in-tier-3 plus 2-in-tier-5 basket now spans two authorities, so it needs a coordinator that A does not have"
+            },
+            {
+              "seq": 3,
+              "from": "basket",
+              "to": "limit-svc",
+              "label": "reserve account quota",
+              "note": "the per-account limit spans all six tiers, so it becomes cross-partition uniqueness held outside every seat authority"
+            },
+            {
+              "seq": 4,
+              "from": "basket",
+              "to": "tier-auth",
+              "label": "escrow per tier",
+              "note": "an escrow protocol is a saga over inventory with no isolation — a partially committed basket is visible to other readers with nobody told when it is undone"
+            },
+            {
+              "seq": 5,
+              "from": "tier-auth",
+              "to": "seat-log",
+              "label": "quorum append",
+              "note": "the durability point is the log quorum; the in-memory state is a view of it"
+            },
+            {
+              "seq": 6,
+              "from": "basket",
+              "to": "coredb",
+              "label": "record order and escrow",
+              "note": "inventory and money now commit in different authorities, which is the structural cost of the split"
+            }
+          ]
+        },
+        {
+          "id": "purchase",
+          "name": "Pay and finalize across authorities",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "cdn",
+              "to": "pay-adapter",
+              "label": "submit checkout",
+              "note": "the 68 s payment window is unchanged and still mandatory"
+            },
+            {
+              "seq": 2,
+              "from": "pay-adapter",
+              "to": "psp",
+              "label": "authorize",
+              "note": "identical to A"
+            },
+            {
+              "seq": 3,
+              "from": "pay-adapter",
+              "to": "tier-auth",
+              "label": "commit escrow to SOLD",
+              "note": "no single transaction covers seats and money here; this step can succeed for tier 3 and fail for tier 5"
+            },
+            {
+              "seq": 4,
+              "from": "pay-adapter",
+              "to": "coredb",
+              "label": "order, ledger, outbox",
+              "note": "the ledger commits in a different authority from the seats it is supposed to account for"
+            },
+            {
+              "seq": 5,
+              "from": "pay-adapter",
+              "to": "psp",
+              "label": "capture",
+              "note": "the money step is non-compensable, so a half-applied basket is a P0 the saga cannot undo"
+            },
+            {
+              "seq": 6,
+              "from": "psp",
+              "to": "webhook",
+              "label": "authorized / captured"
+            },
+            {
+              "seq": 7,
+              "from": "webhook",
+              "to": "coredb",
+              "label": "store raw, advance by rank"
+            }
+          ]
+        },
+        {
+          "id": "admit",
+          "name": "Queue, draw, and admission",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "client",
+              "to": "cdn",
+              "label": "static shell"
+            },
+            {
+              "seq": 2,
+              "from": "cdn",
+              "to": "waitroom",
+              "label": "join the draw",
+              "note": "identical to A — the edge is not where this candidate differs"
+            },
+            {
+              "seq": 3,
+              "from": "waitroom",
+              "to": "queue-store",
+              "label": "one position write"
+            },
+            {
+              "seq": 4,
+              "from": "waitroom",
+              "to": "objstore",
+              "label": "seed + ordered list"
+            },
+            {
+              "seq": 5,
+              "from": "admission",
+              "to": "cdn",
+              "label": "drain front",
+              "note": "now also publishes the held-inventory guard state, because at 1,800/s the venue reaches 60,000 held seats in ~33 s and the map reads sold out while nothing has sold"
+            }
+          ]
+        },
+        {
+          "id": "reconcile",
+          "name": "Escrow and money reconciliation",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "reconciler",
+              "to": "tier-auth",
+              "label": "sweep open escrows",
+              "note": "a class of work that exists only because the invariant was split"
+            },
+            {
+              "seq": 2,
+              "from": "reconciler",
+              "to": "coredb",
+              "label": "orphan-capture sweep",
+              "note": "now has to join across authorities to answer whether every captured dollar has a seat behind it"
+            },
+            {
+              "seq": 3,
+              "from": "reconciler",
+              "to": "pay-adapter",
+              "label": "query the ambiguous authorization"
+            },
+            {
+              "seq": 4,
+              "from": "reconciler",
+              "to": "coredb",
+              "label": "resolve or force-void"
+            }
+          ]
+        },
+        {
+          "id": "read",
+          "name": "Availability and personal reads",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "seat-log",
+              "to": "projector",
+              "label": "tail six partitions",
+              "note": "merging six independent partitions into one bitmap adds a merge-order question A does not have"
+            },
+            {
+              "seq": 2,
+              "from": "projector",
+              "to": "cdn",
+              "label": "merged bitmap"
+            },
+            {
+              "seq": 3,
+              "from": "cdn",
+              "to": "replicas",
+              "label": "own order and payment"
+            }
+          ]
+        }
+      ],
+      "tradeoffs": {
+        "pros": [
+          "the seat write path is genuinely elastic: six independent authorities absorb the burst without a shared lock, which is why elasticity stays at the space-based prior's 5",
+          "reads of seat state never touch a database at all, and in-memory apply is faster per transition than a conditional UPDATE",
+          "each tier's failure is isolated: losing tier 3's leader stops tier 3, not the on-sale",
+          "the replicated seat log is a durable, replayable record of every transition, which makes offline analysis of a real on-sale straightforward"
+        ],
+        "cons": [
+          "reliability is a 2, a severe downgrade from the prior: the per-account limit and any multi-tier basket cross partition boundaries, converting two local constraints into an escrow saga with no isolation — the invariant does not want to be split, so it should not be split",
+          "performance is a 4 rather than the prior's 5: the 300/s figure is a measurement of the writer, and six partitions delivering 1,800/s is an unmeasured 6x claim about a component nobody has profiled",
+          "scalability is a 3 rather than the prior's 5: the 5%-share tier attracts a disproportionate share of demand, so five authorities idle while one saturates — partitioning by tier partitions the inventory, not the load",
+          "the benefit it buys is 10.7%: at 1,800/s the t99 at 70% conversion moves from 2,149 s to 1,919 s, and an infinitely fast writer reaches 1,890 s, because 61.4% of the tail is hold-expiry recycling rather than writer scarcity",
+          "it creates a failure mode A does not have: at 1,800/s greedy admission peaks at 60,000 held seats within ~33 s, so the seat map reads sold out for ten minutes while nothing has sold — which forces back the inventory guard that simulation proved harmful at 300/s",
+          "recovery time becomes the availability budget and must be published, because in-memory authority means recovery is snapshot age plus replay rate — a number A never has to own",
+          "simplicity is the prior's 1 and this design earns it honestly: six stateful authorities, six leader elections, a replicated log, a basket coordinator, and an escrow protocol is a different operational organisation from the one that exists"
+        ]
+      },
+      "ratings": {
+        "deployability": 2,
+        "elasticity": 5,
+        "evolvability": 3,
+        "faultTolerance": 3,
+        "modularity": 3,
+        "cost": 2,
+        "performance": 4,
+        "reliability": 2,
+        "scalability": 3,
+        "simplicity": 1,
+        "testability": 2
+      }
+    },
+    {
+      "id": "c",
+      "name": "Deferred allocation with an auditable draw",
+      "style": "pipeline",
+      "thesis": "Demand capture is decoupled from allocation entirely: the burst becomes an append-only intent write with no seat state touched and no payment call made, and allocation then runs as a seeded batch in which conversion at the seat layer is 100% and there is no hold to expire.",
+      "canvas": {
+        "primaryFlow": "capture"
+      },
+      "components": [
+        {
+          "id": "client",
+          "name": "Fan client",
+          "type": "mobile",
+          "zone": "edge",
+          "position": {
+            "x": 160,
+            "y": 260
+          },
+          "note": "submits an intent and then waits for an answer; there is no live map to poll and no race to lose, so there is nothing to retry"
+        },
+        {
+          "id": "cdn",
+          "name": "CDN + edge worker",
+          "type": "cdn",
+          "zone": "edge",
+          "position": {
+            "x": 440,
+            "y": 260
+          },
+          "tech": "50 POPs",
+          "note": "derived: static shell and a single 'on-sale in progress' status object — the 50,000 QPS live seat map does not exist in this candidate",
+          "state": {
+            "role": "derived",
+            "source": "the batch driver's published stage and estimated completion time",
+            "cursor": "batch stage id and round number",
+            "recovery": "a new stage is a new immutable object; a cold cache refills from one origin fetch per stage"
+          }
+        },
+        {
+          "id": "intake",
+          "name": "Intent capture service",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 720,
+            "y": 260
+          },
+          "note": "stateless: one append per fan at 33,333/s for 60 s, with zero contention and no relationship to the 300/s writer"
+        },
+        {
+          "id": "draw",
+          "name": "Batch driver",
+          "type": "cron",
+          "zone": "app",
+          "position": {
+            "x": 1000,
+            "y": 260
+          },
+          "note": "closes the window, publishes the seed, orders all intents, and runs allocation rounds until the decline tail converges — 2 rounds at an 8% decline rate"
+        },
+        {
+          "id": "allocator",
+          "name": "Seat allocator",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1280,
+            "y": 260
+          },
+          "tech": "single-threaded, batch-driven",
+          "note": "the same allocator as candidate A driven from a batch source instead of a live one: 60,000 × 2 ÷ 300 = 400 s, the absolute floor, because a batch has no abandoned holds"
+        },
+        {
+          "id": "pay-adapter",
+          "name": "Payment adapter",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1560,
+            "y": 260
+          },
+          "note": "authorizes winners only at a rate the design chooses — ~50/s over ten minutes rather than 2,000,000 fans racing; losers never touch the provider at all"
+        },
+        {
+          "id": "psp",
+          "name": "Payment provider",
+          "type": "external",
+          "zone": "external",
+          "position": {
+            "x": 1840,
+            "y": 260
+          },
+          "note": "sees ~32,609 authorizations instead of an uncontrolled burst, which makes the contractual quota far easier to honour"
+        },
+        {
+          "id": "objstore",
+          "name": "Draw seed store",
+          "type": "blob",
+          "zone": "data",
+          "position": {
+            "x": 160,
+            "y": 520
+          },
+          "note": "authoritative for audit: the published seed and the resulting draw order, which make a whole on-sale replayable offline months later",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "checksum-verified replicated object completion before the batch is allowed to start",
+            "failureDomain": "provider-managed multi-zone replicas",
+            "rpo": "0 — the seed is written once and never mutated",
+            "rto": "< 5 min zonal; < 60 min regional",
+            "recovery": "version restore; the draw order is re-derivable from the seed and the intent set"
+          }
+        },
+        {
+          "id": "intent-store",
+          "name": "Intent store",
+          "type": "db-nosql",
+          "zone": "data",
+          "position": {
+            "x": 720,
+            "y": 520
+          },
+          "tech": "partitioned append-only",
+          "note": "authoritative demand record: a pure insert at 33,333/s with zero contention, holding 2,000,000 stored payment-method tokens for 30,000 eventual charges",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "quorum-replicated append acknowledged before the fan is told their intent is recorded",
+            "failureDomain": "partition replicas in three independently powered availability zones",
+            "rpo": "0 zonal; ≤ 60 s regional",
+            "rto": "< 60 s zonal; the batch cannot start until every partition is readable",
+            "recovery": "fenced partition promotion; a lost partition is fatal to the draw and is why the window does not close until every partition acknowledges"
+          }
+        },
+        {
+          "id": "coredb",
+          "name": "Core database",
+          "type": "db-sql",
+          "zone": "data",
+          "position": {
+            "x": 1280,
+            "y": 520
+          },
+          "tech": "primary + synchronous standby",
+          "note": "authoritative for seat, allocation, order, payment, payment_event, ledger_entry, and outbox — the same single authority as candidate A, with no hold table because there are no holds",
+          "state": {
+            "role": "authoritative",
+            "acknowledgement": "local WAL fsync plus synchronous apply acknowledgement from a same-region standby",
+            "failureDomain": "primary and synchronous standby in independently powered availability zones",
+            "rpo": "0 for one-zone loss; ≤ 60 s for whole-region loss",
+            "rto": "15-30 s zonal failover, which only delays a batch rather than straddling a live payment window; ≤ 30 min regional restore",
+            "recovery": "fenced promotion, then the batch driver resumes from its last committed round — a batch is restartable in a way a live on-sale is not"
+          }
+        },
+        {
+          "id": "webhook",
+          "name": "Webhook receiver",
+          "type": "service",
+          "zone": "app",
+          "position": {
+            "x": 1840,
+            "y": 520
+          },
+          "note": "unchanged shape, far lower pressure: the same 84,783 deliveries arrive spread over a chosen authorization rate rather than a sell-out burst"
+        },
+        {
+          "id": "replicas",
+          "name": "Read replicas",
+          "type": "db-sql",
+          "zone": "data",
+          "position": {
+            "x": 440,
+            "y": 760
+          },
+          "tech": "3 async replicas",
+          "note": "derived: serve a fan's own intent and, later, their result — the read path collapses because there is no live availability to publish",
+          "state": {
+            "role": "derived",
+            "source": "the core database's write-ahead log",
+            "cursor": "replay LSN, alarmed above 1 s of lag",
+            "recovery": "re-stream from the primary or rebuild from a base backup"
+          }
+        },
+        {
+          "id": "outbox-relay",
+          "name": "Outbox relay",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 1280,
+            "y": 760
+          },
+          "note": "unchanged: tails the outbox committed with each allocation and publishes at least once, keyed by outbox_id"
+        },
+        {
+          "id": "reconciler",
+          "name": "Reconciler",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 1560,
+            "y": 760
+          },
+          "note": "still owns UNKNOWN, but the exposure is smaller by construction: a seat is already assigned before any authorization is attempted, so an ambiguous payment leaves a fan un-charged with a seat rather than charged without one"
+        },
+        {
+          "id": "broker",
+          "name": "Event broker",
+          "type": "stream",
+          "zone": "async",
+          "position": {
+            "x": 1560,
+            "y": 1000
+          },
+          "note": "derived from the outbox; carries both the winner entitlements and the 1,970,000 not-selected notifications",
+          "state": {
+            "role": "derived",
+            "source": "the outbox table in the core database",
+            "cursor": "consumer offsets plus the relay's last published outbox_id",
+            "recovery": "replay retained segments or re-publish from the outbox"
+          }
+        },
+        {
+          "id": "notifier",
+          "name": "Delivery worker",
+          "type": "worker",
+          "zone": "async",
+          "position": {
+            "x": 1840,
+            "y": 1000
+          },
+          "note": "the single largest send in the system: 30,000 entitlements and 1,970,000 not-selected messages, all outbox-driven and retried by a unique send record"
+        }
+      ],
+      "edges": [
+        {
+          "from": "client",
+          "to": "cdn",
+          "kind": "sync",
+          "label": "shell + status",
+          "importance": "primary",
+          "contract": {
+            "deadline": "300 ms at the edge",
+            "retryOwner": "client, jittered",
+            "backlogBound": "one immutable status object per batch stage; request collapsing per POP"
+          }
+        },
+        {
+          "from": "cdn",
+          "to": "intake",
+          "kind": "sync",
+          "label": "submit intent",
+          "importance": "primary",
+          "contract": {
+            "deadline": "2 s",
+            "retryOwner": "client on 429 and 5xx, idempotent by (event, account)",
+            "backlogBound": "stateless tier autoscaled for 33,333 req/s over 60 s; 429 with Retry-After above it, and a late intent is simply outside the window"
+          }
+        },
+        {
+          "from": "intake",
+          "to": "intent-store",
+          "kind": "sync",
+          "label": "append intent",
+          "importance": "primary",
+          "contract": {
+            "deadline": "500 ms to a quorum-replicated append",
+            "retryOwner": "intent capture service, twice, then 503 so the client retries",
+            "backlogBound": "one row per (event, account); partition count sized so no partition exceeds 100,000 appends/s"
+          }
+        },
+        {
+          "from": "intake",
+          "to": "objstore",
+          "kind": "async",
+          "label": "publish the seed",
+          "contract": {
+            "deadline": "the seed is durable before the window opens, not after it closes",
+            "retryOwner": "intent capture service, exponential backoff; the on-sale does not open without it",
+            "backlogBound": "one seed per event, written once and never mutated"
+          }
+        },
+        {
+          "from": "draw",
+          "to": "intent-store",
+          "kind": "sync",
+          "label": "read all intents in seed order",
+          "importance": "primary",
+          "contract": {
+            "deadline": "no request deadline — a batch stage, bounded instead by a 300 s scan budget per round",
+            "retryOwner": "batch driver, restarting the round from its last committed checkpoint",
+            "backlogBound": "one round in flight; a round is never started until the previous one has committed"
+          }
+        },
+        {
+          "from": "draw",
+          "to": "allocator",
+          "kind": "sync",
+          "label": "drive allocation",
+          "importance": "primary",
+          "contract": {
+            "deadline": "400 s per full pass at 300 transitions/s — the absolute floor, since a batch has no abandoned holds",
+            "retryOwner": "batch driver, resuming from the last committed allocation checkpoint",
+            "backlogBound": "one allocation pass at a time; rounds are serial by construction"
+          }
+        },
+        {
+          "from": "allocator",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "assign seats",
+          "importance": "primary",
+          "contract": {
+            "deadline": "500 ms per transaction",
+            "retryOwner": "allocator, 2 attempts",
+            "backlogBound": "in-flight cap of 300 — the same measured budget, now spent entirely on productive transitions"
+          }
+        },
+        {
+          "from": "draw",
+          "to": "pay-adapter",
+          "kind": "sync",
+          "label": "authorize winners only",
+          "importance": "primary",
+          "contract": {
+            "deadline": "a chosen ~50 authorizations/s over roughly ten minutes, well under the 57/s contractual rate",
+            "retryOwner": "batch driver, by attempt-invariant key; a timeout is UNKNOWN and handed to the reconciler",
+            "backlogBound": "concurrency capped at 570 by the adapter pool, and the batch simply runs longer rather than queueing deeper"
+          }
+        },
+        {
+          "from": "pay-adapter",
+          "to": "psp",
+          "kind": "sync",
+          "label": "authorize / capture",
+          "importance": "primary",
+          "contract": {
+            "deadline": "12 s, the p99 plus 50%",
+            "retryOwner": "nobody — a timeout becomes UNKNOWN and the reconciler queries it",
+            "backlogBound": "570-deep pool; overflow slows the batch rather than shedding a fan"
+          }
+        },
+        {
+          "from": "pay-adapter",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "capture, ledger, outbox",
+          "contract": {
+            "deadline": "500 ms per transaction",
+            "retryOwner": "payment adapter, once, by effect key",
+            "backlogBound": "in-flight cap of 300; a declined winner's seat returns to the next round rather than to a live pool"
+          }
+        },
+        {
+          "from": "psp",
+          "to": "webhook",
+          "kind": "async",
+          "label": "authorized / captured",
+          "contract": {
+            "deadline": "acknowledged in under 1 s",
+            "retryOwner": "the provider, on its own schedule",
+            "backlogBound": "84,783 deliveries spread over a chosen authorization rate; processing queue depth-capped at 10,000"
+          }
+        },
+        {
+          "from": "webhook",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "store raw, advance by rank",
+          "contract": {
+            "deadline": "1 s",
+            "retryOwner": "webhook receiver, twice, then let the provider redeliver",
+            "backlogBound": "stateless receiver; 10,000-deep processing queue sheds by age"
+          }
+        },
+        {
+          "from": "reconciler",
+          "to": "coredb",
+          "kind": "sync",
+          "label": "resolve UNKNOWN, both sweeps",
+          "contract": {
+            "deadline": "1 s per sweep query",
+            "retryOwner": "reconciler, exponential backoff",
+            "backlogBound": "orphan sweeps every 60 s; open UNKNOWN alarmed above 50 — the charged-without-a-seat direction is near-empty by construction"
+          }
+        },
+        {
+          "from": "reconciler",
+          "to": "pay-adapter",
+          "kind": "sync",
+          "label": "query by attempt-invariant key",
+          "contract": {
+            "deadline": "5 s",
+            "retryOwner": "reconciler, exponential backoff to a 5-minute SLA, then force-void and return the seat to the next round",
+            "backlogBound": "bounded by the open UNKNOWN count; lowest priority on the 570-deep pool"
+          }
+        },
+        {
+          "from": "coredb",
+          "to": "replicas",
+          "kind": "async",
+          "label": "streaming replication",
+          "contract": {
+            "deadline": "replica lag under 1 s",
+            "retryOwner": "each replica, re-streaming from its own LSN",
+            "backlogBound": "WAL retention of 8 GB; beyond it, rebuild from a base backup"
+          }
+        },
+        {
+          "from": "cdn",
+          "to": "replicas",
+          "kind": "sync",
+          "label": "own intent and result",
+          "contract": {
+            "deadline": "300 ms",
+            "retryOwner": "client on 429 and 5xx",
+            "backlogBound": "far below A's 7,500 QPS, because a fan checks a result once rather than polling a live map"
+          }
+        },
+        {
+          "from": "coredb",
+          "to": "outbox-relay",
+          "kind": "sync",
+          "label": "poll outbox",
+          "contract": {
+            "deadline": "5 s",
+            "retryOwner": "outbox relay, exponential backoff",
+            "backlogBound": "outbox depth alarmed at 10,000 rows"
+          }
+        },
+        {
+          "from": "outbox-relay",
+          "to": "broker",
+          "kind": "async",
+          "label": "publish by outbox_id",
+          "contract": {
+            "deadline": "5 s handoff",
+            "retryOwner": "outbox relay, exponential backoff; consumers dedup on outbox_id",
+            "backlogBound": "outbox depth alarmed at 10,000; the broker retains 7 days"
+          }
+        },
+        {
+          "from": "broker",
+          "to": "notifier",
+          "kind": "async",
+          "label": "results to 2,000,000 fans",
+          "contract": {
+            "deadline": "every fan answered within 30 min of the batch completing",
+            "retryOwner": "delivery worker, keyed on a unique (account, event, template) send record",
+            "backlogBound": "2,000,000 messages at a provider-negotiated send rate; 24 h retention, then dropped"
+          }
+        }
+      ],
+      "flows": [
+        {
+          "id": "capture",
+          "name": "Capture demand as intent",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "intake",
+              "to": "objstore",
+              "label": "publish the seed",
+              "note": "published before the window opens, so nobody can claim it was chosen after the fact"
+            },
+            {
+              "seq": 2,
+              "from": "client",
+              "to": "cdn",
+              "label": "static shell",
+              "note": "no live seat map exists, so the 6.0 Gbps availability read problem does not exist either"
+            },
+            {
+              "seq": 3,
+              "from": "cdn",
+              "to": "intake",
+              "label": "submit intent",
+              "note": "(account, tier preference list, quantity, stored payment-method token) — no seat state touched and no payment call made"
+            },
+            {
+              "seq": 4,
+              "from": "intake",
+              "to": "intent-store",
+              "label": "append intent",
+              "note": "a pure append at 33,333/s with zero contention and no relationship at all to the 300/s writer"
+            }
+          ]
+        },
+        {
+          "id": "allocate",
+          "name": "Draw and allocate",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "draw",
+              "to": "intent-store",
+              "label": "read in seed order",
+              "note": "the draw order is reproducible forever from the published seed — the strongest form of the auditability requirement in the document"
+            },
+            {
+              "seq": 2,
+              "from": "draw",
+              "to": "allocator",
+              "label": "drive allocation",
+              "note": "conversion at the seat layer is effectively 100%, so the 400 s absolute floor is actually reachable rather than theoretical"
+            },
+            {
+              "seq": 3,
+              "from": "allocator",
+              "to": "coredb",
+              "label": "assign seats",
+              "note": "the seat is committed before any authorization is attempted, which is what makes the P0 window nearly vanish"
+            },
+            {
+              "seq": 4,
+              "from": "draw",
+              "to": "pay-adapter",
+              "label": "authorize winners only",
+              "note": "~30,000 authorizations at a chosen rate, not 2,000,000 at 33,333/s; the 1,970,000 losers never touch the provider"
+            }
+          ]
+        },
+        {
+          "id": "settle",
+          "name": "Capture, notify, and re-round",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "pay-adapter",
+              "to": "psp",
+              "label": "authorize",
+              "note": "a decline releases the seat into the next allocation round rather than leaving a fan charged"
+            },
+            {
+              "seq": 2,
+              "from": "pay-adapter",
+              "to": "coredb",
+              "label": "capture, ledger, outbox",
+              "note": "the loop converges in 2 rounds at an 8% decline rate — the same geometric shape as A's abandonment waves, but with a much smaller ratio"
+            },
+            {
+              "seq": 3,
+              "from": "psp",
+              "to": "webhook",
+              "label": "authorized / captured"
+            },
+            {
+              "seq": 4,
+              "from": "webhook",
+              "to": "coredb",
+              "label": "store raw, advance by rank"
+            },
+            {
+              "seq": 5,
+              "from": "coredb",
+              "to": "outbox-relay",
+              "label": "poll outbox"
+            },
+            {
+              "seq": 6,
+              "from": "outbox-relay",
+              "to": "broker",
+              "label": "publish"
+            },
+            {
+              "seq": 7,
+              "from": "broker",
+              "to": "notifier",
+              "label": "answer every fan",
+              "note": "the not-selected answer was never a race a fan could lose, which is the product difference this candidate really trades on"
+            }
+          ]
+        },
+        {
+          "id": "reconcile",
+          "name": "Reconcile the ambiguous tail",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "reconciler",
+              "to": "coredb",
+              "label": "sweep non-terminal payments",
+              "note": "the orphan-capture direction is near-empty by construction, because assignment precedes authorization"
+            },
+            {
+              "seq": 2,
+              "from": "reconciler",
+              "to": "pay-adapter",
+              "label": "query the ambiguous authorization"
+            },
+            {
+              "seq": 3,
+              "from": "reconciler",
+              "to": "coredb",
+              "label": "resolve or return the seat",
+              "note": "an unresolved authorization returns the seat to the next round instead of stranding it for 600 s"
+            }
+          ]
+        },
+        {
+          "id": "read",
+          "name": "A fan checks their result",
+          "steps": [
+            {
+              "seq": 1,
+              "from": "client",
+              "to": "cdn",
+              "label": "batch status",
+              "note": "one shared immutable object per stage replaces the entire 50,000 QPS live read budget"
+            },
+            {
+              "seq": 2,
+              "from": "cdn",
+              "to": "replicas",
+              "label": "own intent and result",
+              "note": "checked once, not polled — the read path collapses to almost nothing"
+            },
+            {
+              "seq": 3,
+              "from": "coredb",
+              "to": "replicas",
+              "label": "streaming replication"
+            }
+          ]
+        }
+      ],
+      "tradeoffs": {
+        "pros": [
+          "the charged-without-a-seat window nearly disappears: the seat is committed before an authorization is even attempted, so the ordering is assign then authorize then capture and a declined card releases a seat rather than stranding a charge — reliability is a 5 against the pipeline prior's 4",
+          "no hold exists, so the 61.4% of the tail that hold-expiry recycling owns in A simply does not exist, and the 400 s absolute floor is reachable rather than theoretical",
+          "the burst is absorbed by an append-only write with zero contention, so elasticity is a 5 rather than the prior's 3 — the arrival rate and the writer rate are no longer the same problem",
+          "a seeded, reproducible batch is the most testable artifact in the document: a real on-sale can be replayed offline, which is why testability is a 5 against a prior of 3",
+          "the read path collapses — no live seat map means the 6.0 Gbps availability problem and the 50,000 QPS budget both vanish",
+          "modularity is a 4 rather than the prior's 3: capture, draw, allocate, authorize, and notify are separate programs with a durable artifact between each pair"
+        ],
+        "cons": [
+          "performance is a 1 against the prior's 5, and that is the correct rating: the prior measures throughput, but the user-visible metric here is time-to-answer, and 400 s of allocation plus roughly 600 s of authorization plus notification is 10-30 minutes for the last fan",
+          "it changes the product, and that is not an engineering decision: no live seat map, no seat choice, no instant confirmation, and some artists and promoters contractually require a live map",
+          "evolvability is a 2: a batch pipeline with a published seed is rigid by design, and the same rigidity that makes it auditable makes mid-season product changes expensive",
+          "2,000,000 fans must store a payment-method token before knowing whether they won — a conversion killer and a data-protection surface of 2,000,000 tokens for 30,000 eventual charges",
+          "gaming shifts rather than disappearing: with click speed neutralised, the attack surface becomes bulk account creation, which needs a verified-fan funnel that is explicitly out of scope — so this candidate exports a hard problem to a system that does not exist yet",
+          "a declined winner's seat must be re-allocated, so the batch is a loop rather than one pass; at an 8% decline rate it converges in 2 rounds instead of A's 4 abandonment waves, which is a real win but a smaller one than 'one pass'"
+        ]
+      },
+      "ratings": {
+        "deployability": 4,
+        "elasticity": 5,
+        "evolvability": 2,
+        "faultTolerance": 4,
+        "modularity": 4,
+        "cost": 4,
+        "performance": 1,
+        "reliability": 5,
+        "scalability": 5,
+        "simplicity": 4,
+        "testability": 5
+      }
     }
   ],
   "comparison": {
@@ -1934,10 +3419,57 @@
     ],
     "recommendation": {
       "architecture": "a",
-      "reasoning": []
+      "reasoning": [
+        "The platform is small: 40,000,000 tickets/yr is 2.54 seat-state transitions/s, six times below the ~17 write-TPS threshold at which one ACID database still has capacity to spare. Rate contributes no argument for distributing anything.",
+        "So the only thing that could justify distribution is an invariant spanning owners that cannot share a transaction, and there is none. No-double-sale is per seat, no-overbooking is a count over one table, money-to-seat is one transaction — and the per-account limit spans all six tiers, which makes it an argument against splitting by tier rather than for it.",
+        "The real problem is a burst, not a volume: arrivals exceed writer capacity 111:1 and the peak-to-average write ratio is 118:1. That is elasticity, and it is bought at the door — 33,333 arrivals/s become 75 admissions/s, a 444:1 reduction performed by a signed-token check at the edge with zero network calls.",
+        "Candidate B's premise fails on measurement. 300/s is a measurement of the writer; six partitions delivering 1,800/s is an unmeasured 6x claim. Even granting it in full, t99 at 70% conversion moves only from 2,149 s to 1,919 s, because 61.4% of the tail is hold-expiry recycling and only 12.1% is writer scarcity — B spends its entire complexity budget on 12% of the problem.",
+        "And B creates a failure mode A does not have: at 300/s greedy residual admission peaks at 31,860 held seats and self-regulates, while at 1,800/s it reaches all 60,000 within ~33 s, so the map reads sold out for ten minutes with nothing sold. B must then add back the held-inventory guard that simulation showed made t95 worse — 1,482 s to 2,099 s at a 60% guard, 3,310 s at 35%.",
+        "The P0 invariant is satisfied structurally, and only inside one transactional authority: authorize, then assign in one ACID transaction, then capture, so the charged-without-a-seat window is the gap between commit and capture, which the reconciler owns and bounds at 5 minutes. B places seats in six authorities and money outside all of them, turning finalization into a saga with a non-compensable money step and no isolation.",
+        "The read load is a cache problem, not a serving problem, and no candidate differs: 50,000 QPS at 14.6 KiB is 6.0 Gbps and forecloses origin serving, but 42,500 of it is identical for every viewer, so a 1 s TTL puts origin fill at 50 req/s. The only personalised read is 7,500 QPS across three replicas with the primary serving zero.",
+        "C is correct and it is not an agent's decision to take. It satisfies the P0 invariant more strongly than A and reaches the 400 s absolute floor, but it deletes the live seat map, seat choice, and instant confirmation — a product decision with contractual consequences for artists and promoters. It is recorded as a documented, pre-built switch: the same allocator driven from a batch source, triggered when registered demand exceeds 20x inventory. This event's 33:1 crosses that trigger, and escalating it is the single highest-value action this design surfaces.",
+        "What breaks first in A, named up front: the primary failover, because a 30 s failover defers 9,000 transitions and straddles the 68 s payment window of every in-flight checkout — precisely the orders with money in the air. The durable payment lock and the reconciler bound it; they do not eliminate it.",
+        "The measurement that would overturn this: profile why the seat writer is 300/s. If it is lock contention on hot seat rows, server-assigned best-available may raise it for free and the ceiling was never a ceiling. If it is CPU or fsync, it is real. The design is sized at 300/s so that it is correct either way, which is what makes the profile a day-one task rather than a prerequisite."
+      ]
     }
   },
-  "risks": [],
-  "nextSteps": [],
+  "risks": [
+    {
+      "text": "The 57 auth/s sustained rate and the 570-deep concurrency ceiling are contractual terms with the payment provider, not engineering tasks — this is the single external quota the design depends on and it cannot launch unconfirmed",
+      "horizon": "before launch"
+    },
+    {
+      "text": "Nobody has profiled why the seat writer is 300/s. If it is lock contention on hot seat rows, best-available allocation may raise it for free; if it is CPU in business logic or fsync, it is permanent",
+      "horizon": "day one"
+    },
+    {
+      "text": "This event's registered demand is 33:1 against inventory, which crosses the stated 20:1 trigger for the deferred-draw switch — an unescalated trigger is the difference between a product decision and an incident",
+      "horizon": "before this on-sale"
+    },
+    {
+      "text": "The allocator is a single active instance per event; leader election with fencing must be proven under a real partition, because a split-brain allocator that the database does stop still burns budget on aborted writes",
+      "horizon": "at launch"
+    },
+    {
+      "text": "Conversion is the highest-leverage input in the whole design and it is assumed at 70%. At 50% the writer wastes 49.7% of every transition and t99 reaches 3,881 s, so the first real on-sale is also the measurement that resizes the envelope",
+      "horizon": "first live on-sale"
+    },
+    {
+      "text": "Explicit release is a product change, not an infrastructure one, and it owns 28-49% of the tail. If the client work is deprioritised, the capacity argument silently reverts to the 2,149 s baseline",
+      "horizon": "first product cycle"
+    },
+    {
+      "text": "Losing both the queue store and its object-storage snapshot forces a public re-draw with a newly published seed — no money at risk, but a promoter-facing event",
+      "horizon": "any on-sale"
+    }
+  ],
+  "nextSteps": [
+    "Confirm 57 authorizations/s sustained and a 570-deep concurrency ceiling in writing with the payment provider.",
+    "Profile the seat writer to determine whether 300/s is lock contention, business-logic CPU, or fsync — the design is sized to be correct either way, so this is a day-one task and not a prerequisite.",
+    "Escalate the deferred-draw switch to the product owner: this event exceeds the 20x-inventory trigger, and the choice belongs to whoever owns the artist and promoter contracts.",
+    "Build the explicit release path first — an unload beacon, a visible Cancel control, and hold surrender when a fan starts a new selection — because it moves t99 from 2,149 s to 1,551 s at 60% adoption with no infrastructure change.",
+    "Instrument reap_backlog_seconds and the open-UNKNOWN count before the first on-sale; both are the paging signals for the two named failure modes.",
+    "Rehearse a primary failover inside a synthetic 68 s payment window and verify that the durable payment lock keeps every in-flight hold untouchable and that the reconciler resolves every ambiguous authorization within 5 minutes."
+  ],
   "adr": null
 }

@@ -39,6 +39,6 @@ Every run writes the same three, beside each other:
 - `docs/design/<slug>/design.json` — the structured source of truth
 - `$TMPDIR/system-design-<slug>.html` — the standalone report
 
-See [examples/design-whatsapp](../../examples/design-whatsapp/DESIGN.md) for a complete pair.
+See [examples/design-ticketing](../../examples/design-ticketing/DESIGN.md) for a complete pair.
 
 Run `/system-design` again with feedback and it resumes from the JSON instead of surveying the repository again.
