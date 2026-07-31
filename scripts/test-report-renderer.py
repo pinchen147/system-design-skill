@@ -35,6 +35,7 @@ def render_report(design_path: Path, output_path: Path) -> dict:
             str(design_path),
             "--out",
             str(output_path),
+            "--no-open",
         ],
         check=True,
         capture_output=True,

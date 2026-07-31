@@ -26,7 +26,7 @@ Run the shipped script from the skill's own directory:
 python3 <skill-dir>/scripts/render_report.py --design docs/design/<slug>/design.json --out "$TMPDIR/system-design-<slug>.html"
 ```
 
-`<skill-dir>` is the directory holding `SKILL.md`; the script resolves the template relative to itself. Then open with `open` (macOS) / `xdg-open` (Linux) / `start` (Windows).
+`<skill-dir>` is the directory holding `SKILL.md`; the script resolves the template relative to itself. It also opens the report once written—`open` on macOS, `xdg-open` or `wslview` on Linux, `start` on Windows—so no separate step can be missed. `--no-open` or `SYSTEM_DESIGN_NO_OPEN=1` suppresses it for scripted and headless runs; failing to open is reported but never fatal, since the file is already on disk.
 
 Never read `assets/report-template.html` into context and never rebuild the report by hand. It is 82 KB of renderer code, the substitution is mechanical, and a 27 KB JSON payload full of `/` is corrupted by `sed` and by shell interpolation. The script asserts the placeholder appears exactly once, fails loudly on malformed JSON, and escapes `</` as `<\/` so that no string value can terminate the embedded `<script type="application/json">` block—an unescaped `</script>` inside any `note`, `label`, or `thesis` silently truncates the payload and renders a report titled `System design report` with most components missing.
 

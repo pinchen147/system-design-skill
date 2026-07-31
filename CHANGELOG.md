@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 1.0.2 — 2026-07-31
+
+### Changed
+
+- The renderer opens the report itself as soon as it is written, so a finished run always ends with the report on screen. Opening was previously a separate instruction a run could skip, which left the artifact on disk for nobody to look at. `--no-open`, or `SYSTEM_DESIGN_NO_OPEN=1`, suppresses it for scripted and headless runs; a failure to open is reported and never fatal, since the file is already written.
+
 ## 1.0.1 — 2026-07-31
 
 ### Fixed

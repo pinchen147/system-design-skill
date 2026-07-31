@@ -1,6 +1,6 @@
 {
   "name": "system-design-skill",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Reads a repository as its current architecture, closes the open requirements, runs the capacity math, and compares structurally distinct candidates before recommending one. Outputs an interactive HTML report, a structured design.json, and a durable DESIGN.md.",
   "author": {
     "name": "Pin Chen",

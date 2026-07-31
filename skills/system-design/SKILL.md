@@ -4,7 +4,7 @@ description: Design or evolve a production system from repository evidence, meas
 license: MIT
 metadata:
   author: pinchen147
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # System Design
@@ -126,8 +126,9 @@ Then render and open it. The run is not complete until the report exists on disk
 python3 <skill-dir>/scripts/render_report.py \
   --design docs/design/<slug>/design.json \
   --out "$TMPDIR/system-design-<slug>.html"
-open "$TMPDIR/system-design-<slug>.html"        # macOS; xdg-open on Linux, start on Windows
 ```
+
+The script opens the report itself once it is written, so there is no separate step to forget. Pass `--no-open` only when nobody is watching—a scripted or headless run.
 
 If the skill directory is not known, find it rather than skipping the step: `ls ~/.claude/skills/system-design/scripts/render_report.py ~/.agents/skills/system-design/scripts/render_report.py 2>/dev/null` covers both standalone installs, and a plugin install lives under `~/.claude/plugins/cache/`. Never read [assets/report-template.html](assets/report-template.html) into context or rebuild the report by hand; see [HTML-REPORT.md](HTML-REPORT.md). The report must contain only its own title/date chrome—no prototype or harness wrapper.
 

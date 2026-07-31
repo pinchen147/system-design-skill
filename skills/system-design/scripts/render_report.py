@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import NoReturn
@@ -78,7 +81,39 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--design", type=Path, required=True, help="path to design.json")
     parser.add_argument("--out", type=Path, required=True, help="path to write the HTML report")
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="write the report without opening it; for tests and headless runs",
+    )
     return parser.parse_args()
+
+
+def open_in_browser(path: Path) -> None:
+    """Open the report the way the platform does.
+
+    The run is not finished until a human can see the report, and an agent that
+    forgets the separate open command leaves one on disk that nobody looks at.
+    Doing it here means it cannot be skipped. A failure to open is reported but
+    never fatal — the file is already written, and headless environments are
+    expected to fail this.
+    """
+    if os.environ.get("SYSTEM_DESIGN_NO_OPEN"):
+        return
+    if sys.platform == "darwin":
+        command = ["open", str(path)]
+    elif os.name == "nt":
+        command = ["cmd", "/c", "start", "", str(path)]
+    else:
+        opener = shutil.which("xdg-open") or shutil.which("wslview")
+        if not opener:
+            print("render_report: no opener found; open it manually", file=sys.stderr)
+            return
+        command = [opener, str(path)]
+    try:
+        subprocess.run(command, check=True, capture_output=True, timeout=15)
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"render_report: could not open the report ({error})", file=sys.stderr)
 
 
 def main() -> None:
@@ -96,6 +131,8 @@ def main() -> None:
 
     check_title(design, rendered, out_path)
     print(out_path)
+    if not args.no_open:
+        open_in_browser(out_path)
 
 
 if __name__ == "__main__":
