@@ -112,22 +112,17 @@ A design is complete only when:
 - every unresolved uncertainty is recorded as an assumption or measurement;
 - all artifacts pass structural and render checks.
 
-Before rendering, verify:
+Before leaving this step, also verify:
 
-- every critical flow reaches a durable or final effect;
 - every queue/log declares delivery and idempotency semantics;
 - every store is source-of-truth or derived;
-- every dependency edge names a deadline, who owns the retry, and a bound on the work that can queue behind it;
 - offered load is stated against drain capacity, including the amplification retries add exactly when capacity is lowest;
-- every authoritative store names its failure domain, its recovery path, and the loss and downtime that path accepts;
 - every structured store has an intuitive schema whose fields, keys, indexes, and relationships support its stated access patterns and invariants;
 - every schema and wire-contract change names its compatibility direction and the order in which readers and writers deploy;
 - the design survives its own clients: duplicate submits, reconnect storms, cold caches, and a dependency that slows instead of failing;
 - burst, skew, fan-out, hot keys, and partial failure are addressed;
 - security, privacy, abuse, retention, and deletion are addressed where relevant;
-- no critical deep dive has been deferred into a vague next step;
-- every finding cites evidence and passes all four debt tests, and every `blocking` finding names by id the invariant or target it violates;
-- `debt.checked` lists every category examined, and every check the run could not establish is recorded rather than dropped.
+- no critical deep dive has been deferred into a vague next step.
 
 ### 8. Audit the architecture for debt
 
@@ -138,6 +133,8 @@ Follow [AUDIT.md](AUDIT.md). The order of its stages is the substance, not the c
 Where a subagent primitive exists, run one finder per category and one verifier per lens. Where it does not, run the same stages inline, restating the brief and discarding the previous stage's reasoning at each boundary. A single pass that finds and judges at once is the one shape that does not work.
 
 Write the result into `design.json` under `debt`, including what was checked and what could not be established. Findings may seed `risks` and `nextSteps`; they never generate a candidate, and they never become an ADR.
+
+The audit is done when every finding cites evidence and passes all four debt tests, every `blocking` finding names by id the invariant or target it violates, and `debt.checked` lists every category examined, with every check the run could not establish recorded rather than dropped.
 
 ### 9. Write, render, and verify
 
