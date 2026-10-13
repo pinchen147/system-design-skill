@@ -168,6 +168,8 @@ When a command or check does not go as described, act on what you observe:
 | No browser tool | Diagnostics and interactions cannot be read | Say the report was rendered but not inspected, and claim nothing it would have shown |
 | `python3` is missing | The report cannot be produced here | Report the run as unfinished, with `design.json` and `DESIGN.md` written |
 
+Finish by answering the ask, not by listing the files written. Go back to what the user asked for and mark each part answered, partly answered, or open, naming what is still missing. Lead with the recommendation and its evidence chain in a few lines; name the `assumed` inputs it rests on and the measurement that would overturn it; state what was not verified, such as an uninspected report or audit checks the run could not establish; then give the report and `design.json` paths. End with the decision that belongs to the user, which step 10 records.
+
 ### 10. Record the decision
 
 When the user chooses, set `status: decided`. In repository mode, offer an ADR under `docs/adr/` that records the accepted candidate, rejected candidates, evidence, and consequences. Name the owning documents from step 2 in its Context, mark any ADR it replaces as superseded, and link `DESIGN.md` from wherever the repo indexes its docs. Future runs must read it and not re-litigate it without new evidence.
