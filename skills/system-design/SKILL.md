@@ -44,7 +44,7 @@ When the process does run, draw the simplest production-viable design first. Add
 
 List existing designs—`docs/design/*/design.json`, or `./*/design.json` outside a git repo—and read each one's `slug`, `title`, and `status`. If one covers this ask, load it and apply the user's feedback before doing new discovery; if two could, name both and ask which.
 
-A loaded design that records `context.observed.commit` says which code it described. Run `git diff --stat <commit>..HEAD` over its in-scope paths, and at step 2 re-read what changed rather than the whole tree. When the history no longer contains that commit, or the design recorded `uncommittedChanges: true`, the drift is unknown: read the in-scope tree as if nothing had been recorded.
+A loaded design that records `context.observed.commit` says which code it described. Run `git diff --stat <commit>..HEAD`; at step 2, once the in-scope paths are classified, re-read the ones it lists rather than the whole tree. When the history no longer contains that commit, or the design recorded `uncommittedChanges: true`, the drift is unknown: read the in-scope tree as if nothing had been recorded.
 
 Otherwise derive a kebab-case slug naming the system or subsystem, not the phrasing of the request (`commerce-layer`, not `add-a-commerce-layer`), and choose:
 
