@@ -17,6 +17,8 @@ Every recommendation must cite an envelope number, a correctness invariant, a na
 
 Do not load examples by default. Only if a first-draft recommendation or interface remains generic, consult the matching BAD/GOOD contrast in [EXAMPLES.md](EXAMPLES.md), then replace generic language with the relevant number, invariant, ownership boundary, or failure behavior.
 
+A run writes only its own artifacts: `design.json` and `DESIGN.md` in the design directory, the rendered report under `${TMPDIR:-/tmp}`, and, at step 10, the ADR and docs-index link the user accepts. Implementing a candidate or changing code is a separate request.
+
 ## Route the ask
 
 Start from what the user brought:
