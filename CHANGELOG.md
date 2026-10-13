@@ -6,18 +6,20 @@ All notable changes to this project are documented here.
 
 ### Added
 
-- Every ask has a stated starting point. A routing table maps what the user brings to where the run starts: a choice the numbers may settle, an existing design to resume, a change or a drift audit in the current codebase, a new system, or a pick between rendered candidates. An audit-only ask was the one an agent was most likely to get wrong: it still draws candidates, because the audit measures each finding's exposure against the recommendation.
+- Every ask has a stated starting point. A routing table maps what the user brings to where the run starts: a choice the numbers may settle, an existing design to resume, a change or a drift audit in the current codebase, a new system, or a pick between rendered candidates. A drift audit or a pick resumes the recorded design first rather than redrawing what was already decided.
 - The run ends by answering the ask. Step 9 stopped once the report opened, and nothing said what to tell the user. A run now goes back to the ask, marks each part answered, partly answered, or open, and leads with the recommendation, the assumed inputs it rests on, the measurement that would overturn it, and what was not verified.
-- Render failures map to a next step. A table in step 9 quotes the renderer's own messages and gives the meaning and the remedy for each, from malformed JSON to a headless session with no way to open the report.
+- Render failures map to a next step. A table in step 9 quotes the renderer's own messages and gives the meaning and the remedy for each, from a design the page cannot parse to a headless session with no way to open the report.
 
 ### Changed
 
 - The description says when not to run. It listed every reason to fire and none to stay out, while five of the invocation fixtures expect no invocation. Explaining a technology or existing code, debugging, and code-level edits are now named as outside the skill.
+- Step 7 carried two checklists that restated three of the same checks in different words. The restatements are gone, except for the recovery path, which the completion contract does not name and which stays as its own check. The debt checks, which sat in step 7 under the pre-render list, now close step 8, where the findings are produced.
 
 ### Fixed
 
-- The render command failed wherever `TMPDIR` is unset, which includes most Linux shells: `--out "$TMPDIR/..."` became `/system-design-<slug>.html`, and the write failed with exit 2. The command now uses `${TMPDIR:-/tmp}`.
-- Step 7 carried two checklists that restated three of the same checks in different words, and asked for debt findings to be verified one step before the audit produced them. The repeats are gone, and the debt checks now close step 8.
+- The render command failed wherever `TMPDIR` is unset, which includes most Linux shells: `--out "$TMPDIR/..."` became `/system-design-<slug>.html`, which any user who cannot write to `/` cannot create. The command now uses `${TMPDIR:-/tmp}`.
+- A `design.json` holding `NaN`, `Infinity`, or a top-level value other than an object rendered with exit 0 and opened as the empty report template, because Python's parser accepts what the page's does not; a top-level list also crashed after writing. The renderer now refuses all of them before writing anything.
+- Recording a decision set only `status`, so `decided` stayed empty and `DESIGN.md`'s frontmatter went stale. Step 10 now sets both and regenerates `DESIGN.md`.
 
 ## 1.1.1 — 2026-08-12
 
