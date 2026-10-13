@@ -1,6 +1,6 @@
 ---
 name: system-design
-description: Design or evolve a production system from repository evidence, measurable requirements, capacity math, protected invariants, and explicit trade-offs. Reads an existing codebase as the current architecture, closes the requirements it cannot recover on its own, then draws structurally distinct candidates and recommends one with a chained evidence argument. Produces an interactive HTML report, a structured design.json, and a durable DESIGN.md a later session can resume. In an existing repository it also audits the implementation against the intended architecture and records the debt it finds, each with a remedy and its evidence. Use for repository architecture work, greenfield systems, scaling and sharding plans, datastore or consistency choices, capacity and cost sizing, recording a decision as an ADR, or auditing a system that has drifted from its design. Answers directly when the numbers already settle the choice instead of manufacturing a document.
+description: Design or evolve a production system from repository evidence, measurable requirements, capacity math, protected invariants, and explicit trade-offs. Draws structurally distinct candidates, recommends one with a chained evidence argument, and writes an interactive HTML report, a structured design.json, and a DESIGN.md a later session can resume; in an existing repository it also audits the implementation for architectural debt against the intended design. Use for evolving a repository's architecture, greenfield systems, scaling and sharding plans, datastore or consistency choices, capacity and cost sizing, recording a decision as an ADR, or auditing drift from a recorded design. Answers directly when the numbers already settle the choice. Skip for explaining how a technology or existing code works, debugging, and code-level edits such as refactoring a function.
 license: MIT
 metadata:
   author: pinchen147
@@ -16,6 +16,19 @@ The process is identical in repository and greenfield work; interview-grade reas
 Every recommendation must cite an envelope number, a correctness invariant, a named failure mode, or a principle from [HEURISTICS.md](HEURISTICS.md).
 
 Do not load examples by default. Only if a first-draft recommendation or interface remains generic, consult the matching BAD/GOOD contrast in [EXAMPLES.md](EXAMPLES.md), then replace generic language with the relevant number, invariant, ownership boundary, or failure behavior.
+
+## Route the ask
+
+Start from what the user brought:
+
+| The user brings | Route |
+|---|---|
+| A choice a number or a recorded decision may already settle | Step 0. Answer in a paragraph when a gate or decision closes it; otherwise continue |
+| An existing design to resume or revise | Step 1 loads it; apply the feedback before any new discovery |
+| A change to this codebase, or an audit of its drift from a recorded design | The full process in repository mode. An audit-only ask still draws candidates, because step 8 measures each finding's exposure against the recommendation |
+| A system with no implementation yet | The full process in greenfield mode; step 8 does not run |
+| A pick between candidates already rendered | Step 10 |
+| An explanation of a technology or existing code, a bug, or a code-level edit | Outside this skill. Answer with ordinary tools and run none of these steps |
 
 ## Process
 
