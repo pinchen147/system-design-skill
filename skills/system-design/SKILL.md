@@ -44,6 +44,8 @@ When the process does run, draw the simplest production-viable design first. Add
 
 List existing designs—`docs/design/*/design.json`, or `./*/design.json` outside a git repo—and read each one's `slug`, `title`, and `status`. If one covers this ask, load it and apply the user's feedback before doing new discovery; if two could, name both and ask which.
 
+A loaded design that records `context.observed.commit` says which code it described. Run `git diff --stat <commit>..HEAD` over its in-scope paths, and at step 2 re-read what changed rather than the whole tree. When the history no longer contains that commit, or the design recorded `uncommittedChanges: true`, the drift is unknown: read the in-scope tree as if nothing had been recorded.
+
 Otherwise derive a kebab-case slug naming the system or subsystem, not the phrasing of the request (`commerce-layer`, not `add-a-commerce-layer`), and choose:
 
 - **Repository mode** when the ask concerns the current codebase. The existing system is Architecture 0.
@@ -53,7 +55,7 @@ State the mode, reason, whether you resumed, and the target directory in one lin
 
 ### 2. Establish the current truth
 
-In repository mode, first classify every top-level directory as system code, first-party vendored code under active development, or dependency, sample, and build output. Only the first two are in scope. Directory size is not evidence of importance—the largest tree is usually not the system, and `git log --format=format: --name-only -200 | sed 's#/.*##' | sort | uniq -c | sort -rn` settles most cases. State the classification in one line, including where it contradicts the ask's framing.
+In repository mode, first classify every top-level directory as system code, first-party vendored code under active development, or dependency, sample, and build output. Only the first two are in scope. Directory size is not evidence of importance—the largest tree is usually not the system, and `git log --format=format: --name-only -200 | sed 's#/.*##' | sort | uniq -c | sort -rn` settles most cases. State the classification in one line, including where it contradicts the ask's framing. Record what you are reading as `context.observed`: the commit `git rev-parse HEAD` reports, and whether `git status --porcelain` lists changes in the in-scope paths. Outside git, omit it.
 
 Restricted to in-scope paths, read architecture docs, ADRs, domain vocabulary, config, and the hot paths from recent history—plus whatever carries state and effects in this system's shape: schemas, APIs, and queues in a networked service; entry points and lifecycle, state owners, write and flush paths, persisted key namespaces, on-disk formats, entity identity keys, and process or sandbox boundaries in a client, desktop, or embedded codebase. Stop when the flows and invariants below close. Code and schema outrank prose when they disagree—record the divergence under `requirements.conflicts`, and ask rather than picking a side silently when it changes an invariant.
 
