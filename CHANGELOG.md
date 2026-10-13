@@ -12,7 +12,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- The description says when not to run. It listed every reason to fire and none to stay out, while four of the invocation fixtures expect no invocation. Explaining a technology or existing code, debugging, and code-level edits are now named as outside the skill.
+- The description says when not to run. It listed every reason to fire and none to stay out, while five of the invocation fixtures expect no invocation. Explaining a technology or existing code, debugging, and code-level edits are now named as outside the skill.
 
 ### Fixed
 
