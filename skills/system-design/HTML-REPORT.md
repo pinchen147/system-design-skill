@@ -59,7 +59,11 @@ If no opener works—headless box, remote session—print the absolute path and 
   "context": {
     "problem": "one paragraph",
     "constraints": ["mobile-first", "small team"],
-    "vocabulary": []                     // terms adopted from the repo's CONTEXT.md (repo mode)
+    "vocabulary": [],                    // terms adopted from the repo's CONTEXT.md (repo mode)
+    "observed": {                        // repo mode in git only: the code step 2 read; omitted otherwise
+      "commit": "9fceb02d0ae598e95dc970b74767f19372d61af8",
+      "uncommittedChanges": false        // true when in-scope paths had uncommitted changes, so the commit alone does not identify what was read
+    }
   },
 
   "requirements": {
