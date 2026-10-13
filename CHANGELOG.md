@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here.
 
+## 1.2.0 — 2026-10-13
+
+### Added
+
+- Every ask has a stated starting point. A routing table maps what the user brings to where the run starts: a choice the numbers may settle, an existing design to resume, a change or a drift audit in the current codebase, a new system, or a pick between rendered candidates. An audit-only ask was the one an agent was most likely to get wrong: it still draws candidates, because the audit measures each finding's exposure against the recommendation.
+- The run ends by answering the ask. Step 9 stopped once the report opened, and nothing said what to tell the user. A run now goes back to the ask, marks each part answered, partly answered, or open, and leads with the recommendation, the assumed inputs it rests on, the measurement that would overturn it, and what was not verified.
+- Render failures map to a next step. A table in step 9 quotes the renderer's own messages and gives the meaning and the remedy for each, from malformed JSON to a headless session with no way to open the report.
+
+### Changed
+
+- The description says when not to run. It listed every reason to fire and none to stay out, while four of the invocation fixtures expect no invocation. Explaining a technology or existing code, debugging, and code-level edits are now named as outside the skill.
+
+### Fixed
+
+- The render command failed wherever `TMPDIR` is unset, which includes most Linux shells: `--out "$TMPDIR/..."` became `/system-design-<slug>.html`, and the write failed with exit 2. The command now uses `${TMPDIR:-/tmp}`.
+- Step 7 carried two checklists that restated three of the same checks in different words, and asked for debt findings to be verified one step before the audit produced them. The repeats are gone, and the debt checks now close step 8.
+
 ## 1.1.1 — 2026-08-12
 
 ### Fixed

@@ -4,7 +4,7 @@ description: Design or evolve a production system from repository evidence, meas
 license: MIT
 metadata:
   author: pinchen147
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # System Design
