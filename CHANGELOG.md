@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## 1.3.0 — 2026-10-13
+
+### Added
+
+- A design records the code it describes. Repository runs write `context.observed` into `design.json`: the commit they read, and whether in-scope paths had uncommitted changes. A resumed run diffs from that commit and re-reads only what changed, so a drift audit of a design recorded a year ago starts from what actually moved. A commit the history no longer contains, or one read alongside uncommitted changes, leaves the drift unknown, and the run reads the whole tree.
+- The skill states what a run may write: `design.json`, `DESIGN.md`, the rendered report, and at the decision step the ADR and docs-index link the user accepts. Implementing a candidate or changing code is a separate request.
+
 ## 1.2.0 — 2026-10-13
 
 ### Added
