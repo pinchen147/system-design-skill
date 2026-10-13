@@ -205,7 +205,7 @@ The report is self-contained and makes no network requests. Copy it, email it, o
 |---|---|
 | `docs/design/<slug>/design.json` | Source of truth for requirements, estimates, components, flows, candidates, and the recommendation — and, in repository mode, the debt register, where a finding you have accepted stays accepted across runs |
 | `docs/design/<slug>/DESIGN.md` | Durable design document for humans and future agent sessions |
-| `$TMPDIR/system-design-<slug>.html` | Self-contained interactive report, regenerated from `design.json` |
+| `${TMPDIR:-/tmp}/system-design-<slug>.html` | Self-contained interactive report, regenerated from `design.json` |
 | `docs/adr/NNNN-<slug>.md` | Offered in repository mode once you pick a winner, so future sessions do not re-litigate it |
 
 Outside a Git repository, `design.json` and `DESIGN.md` are written under `./<slug>/`. When the ask lands below the anti-overengineering gates, nothing is written at all — you get the answer and the gate that closed it.

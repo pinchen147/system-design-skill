@@ -17,14 +17,14 @@ The artifact and schema contract for [SKILL.md](SKILL.md): the component types u
 |---|---|---|
 | `design.json` | `docs/design/<slug>/` (git repo) or `./<slug>/` (no repo) | Source of truth; every iteration edits this first |
 | `DESIGN.md` | Beside `design.json` | Regenerated from the JSON every iteration; a `## Notes` section, if present, is preserved verbatim |
-| `system-design-<slug>.html` | `$TMPDIR` | A render, regenerated any time; never hand-edited, never committed |
+| `system-design-<slug>.html` | `${TMPDIR:-/tmp}` | A render, regenerated any time; never hand-edited, never committed |
 
 ## Render mechanics
 
 Run the shipped script from the skill's own directory:
 
 ```
-python3 <skill-dir>/scripts/render_report.py --design docs/design/<slug>/design.json --out "$TMPDIR/system-design-<slug>.html"
+python3 <skill-dir>/scripts/render_report.py --design docs/design/<slug>/design.json --out "${TMPDIR:-/tmp}/system-design-<slug>.html"
 ```
 
 `<skill-dir>` is the directory holding `SKILL.md`; the script resolves the template relative to itself. It also opens the report once written—`open` on macOS, `xdg-open` or `wslview` on Linux, `start` on Windows—so no separate step can be missed. `--no-open` or `SYSTEM_DESIGN_NO_OPEN=1` suppresses it for scripted and headless runs; failing to open is reported but never fatal, since the file is already on disk.

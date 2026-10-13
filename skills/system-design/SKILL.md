@@ -140,23 +140,33 @@ The audit is done when every finding cites evidence and passes all four debt tes
 
 Write `design.json` and regenerate `DESIGN.md` beside it, preserving any user-owned `## Notes` verbatim. Validate all ids and flow references.
 
-Then render and open it. The run is not complete until the report exists on disk and has been opened—a design.json and a DESIGN.md with no report is an unfinished run, not a finished one.
+Then render and open it. The run is not complete until the report exists on disk and has been opened, or its path handed over where nothing can open it—a design.json and a DESIGN.md with no report is an unfinished run, not a finished one.
 
 `<skill-dir>` is the directory containing this file, wherever it is installed; the script resolves the template relative to itself, so an absolute path always works:
 
 ```bash
 python3 <skill-dir>/scripts/render_report.py \
   --design docs/design/<slug>/design.json \
-  --out "$TMPDIR/system-design-<slug>.html"
+  --out "${TMPDIR:-/tmp}/system-design-<slug>.html"
 ```
 
-The script opens the report itself once it is written, so there is no separate step to forget. Pass `--no-open` only when nobody is watching—a scripted or headless run.
+The script opens the report itself once it is written, so there is no separate step to forget. Pass `--no-open` only when nobody is watching—a scripted or headless run. Whatever fails, iterate through `design.json`: never read [assets/report-template.html](assets/report-template.html) into context, rebuild the report by hand, or edit the rendered HTML; see [HTML-REPORT.md](HTML-REPORT.md). The report must contain only its own title/date chrome—no prototype or harness wrapper.
 
-If the skill directory is not known, find it rather than skipping the step: `ls ~/.claude/skills/system-design/scripts/render_report.py ~/.agents/skills/system-design/scripts/render_report.py 2>/dev/null` covers both standalone installs, and a plugin install lives under `~/.claude/plugins/cache/`. Never read [assets/report-template.html](assets/report-template.html) into context or rebuild the report by hand; see [HTML-REPORT.md](HTML-REPORT.md). The report must contain only its own title/date chrome—no prototype or harness wrapper.
+Then confirm the render survived. The page sets its title at run time, so the static file's `<title>` tag keeps the template's `System design report` placeholder; check instead that the embedded `application/json` block carries the design's own `title` and that no `__DESIGN_JSON__` remains. With a browser tool, load every architecture route and read the hidden `report-diagnostics` element: `data-component-overlaps`, `data-route-collisions`, `data-text-overflows`, `data-fit-overflows`, and `data-label-occlusions` must all be `0`.
 
-Then confirm the render survived. The *rendered page* must show the design's own `title` rather than the template's `System design report` placeholder—a mismatch means the JSON never parsed. The title is set at run time, so the static file still contains the placeholder in its `<title>` tag; grep the embedded `application/json` block instead, or check that no `__DESIGN_JSON__` remains. With a browser tool, load every architecture route and read the hidden `report-diagnostics` element: `data-component-overlaps`, `data-route-collisions`, `data-text-overflows`, `data-fit-overflows`, and `data-label-occlusions` must all be `0`. Any non-zero value is a `design.json` defect—shorten names, move positions, re-render. Without a browser tool, say the report was rendered but not inspected rather than claiming interactions you cannot see.
+When a command or check does not go as described, act on what you observe:
 
-Iterate through `design.json`, never by hand-editing rendered HTML.
+| You observe | It means | Next |
+|---|---|---|
+| `render_report: malformed JSON in <path>: … line L column C` | `design.json` is not valid JSON, and nothing was written | Fix it at that line and column, then re-render |
+| `render_report: cannot write <path>` | The `--out` directory is not writable; a path of `/system-design-…` means `$TMPDIR` was unset | Re-run with the `${TMPDIR:-/tmp}` form above, or another writable path |
+| `render_report.py` not found, `render_report: cannot read template …`, or `… must contain __DESIGN_JSON__ exactly once` | `<skill-dir>` is unknown or names a damaged copy of the skill | `ls ~/.claude/skills/system-design/scripts/render_report.py ~/.agents/skills/system-design/scripts/render_report.py 2>/dev/null` covers both standalone installs; a plugin install lives under `~/.claude/plugins/cache/` |
+| `render_report: warning: … has no design title` | `design.json` lacks `title`, so the page shows the placeholder | Add `title`, then re-render |
+| The rendered page shows `System design report` | The page could not parse its payload | Confirm no `__DESIGN_JSON__` remains, then re-render from `design.json` |
+| Any non-zero `report-diagnostics` value | A `design.json` layout defect | Shorten names or move positions, then re-render |
+| `render_report: no opener found` or `render_report: could not open the report` | A headless session; the file is already written | Hand over the absolute path the script printed: the report is self-contained and portable |
+| No browser tool | Diagnostics and interactions cannot be read | Say the report was rendered but not inspected, and claim nothing it would have shown |
+| `python3` is missing | The report cannot be produced here | Report the run as unfinished, with `design.json` and `DESIGN.md` written |
 
 ### 10. Record the decision
 
