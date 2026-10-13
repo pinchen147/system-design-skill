@@ -163,7 +163,7 @@ def main() -> None:
               f"HTML-REPORT.md vocabulary omits {term!r}")
 
     completion_match = re.search(
-        r"A design is complete only when:\n\n(.*?)(?=\n\nBefore leaving this step, also verify:)",
+        r"A design is complete only when:\n\n(.*?)(?=\n\nBefore rendering, verify:)",
         skill,
         re.DOTALL,
     )

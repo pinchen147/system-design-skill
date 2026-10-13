@@ -25,9 +25,9 @@ Start from what the user brought:
 |---|---|
 | A choice a number or a recorded decision may already settle | Step 0. Answer in a paragraph when a gate or decision closes it; otherwise continue |
 | An existing design to resume or revise | Step 1 loads it; apply the feedback before any new discovery |
-| A change to this codebase, or an audit of its drift from a recorded design | The full process in repository mode. An audit-only ask still draws candidates, because step 8 measures each finding's exposure against the recommendation |
+| A change to this codebase, or an audit of its drift from a recorded design | Step 1 resumes a design that covers it; otherwise the full process in repository mode |
 | A system with no implementation yet | The full process in greenfield mode; step 8 does not run |
-| A pick between candidates already rendered | Step 10 |
+| A pick between candidates already rendered | Step 1 locates the design, then step 10 |
 | An explanation of a technology or existing code, a bug, or a code-level edit | Outside this skill. Answer with ordinary tools and run none of these steps |
 
 ## Process
@@ -112,10 +112,11 @@ A design is complete only when:
 - every unresolved uncertainty is recorded as an assumption or measurement;
 - all artifacts pass structural and render checks.
 
-Before leaving this step, also verify:
+Before rendering, verify:
 
 - every queue/log declares delivery and idempotency semantics;
 - every store is source-of-truth or derived;
+- every authoritative store names the recovery path that meets its RPO and RTO;
 - offered load is stated against drain capacity, including the amplification retries add exactly when capacity is lowest;
 - every structured store has an intuitive schema whose fields, keys, indexes, and relationships support its stated access patterns and invariants;
 - every schema and wire-contract change names its compatibility direction and the order in which readers and writers deploy;
@@ -158,11 +159,11 @@ When a command or check does not go as described, act on what you observe:
 
 | You observe | It means | Next |
 |---|---|---|
-| `render_report: malformed JSON in <path>: … line L column C` | `design.json` is not valid JSON, and nothing was written | Fix it at that line and column, then re-render |
+| `render_report: cannot read design …`, `malformed JSON in …`, or `… must hold a JSON object` | `design.json` is missing, is not valid JSON (`NaN` and `Infinity` included), or is not an object; nothing was written | Fix the path or the file at the place the message names, then re-render |
 | `render_report: cannot write <path>` | The `--out` directory is not writable; a path of `/system-design-…` means `$TMPDIR` was unset | Re-run with the `${TMPDIR:-/tmp}` form above, or another writable path |
 | `render_report.py` not found, `render_report: cannot read template …`, or `… must contain __DESIGN_JSON__ exactly once` | `<skill-dir>` is unknown or names a damaged copy of the skill | `ls ~/.claude/skills/system-design/scripts/render_report.py ~/.agents/skills/system-design/scripts/render_report.py 2>/dev/null` covers both standalone installs; a plugin install lives under `~/.claude/plugins/cache/` |
-| `render_report: warning: … has no design title` | `design.json` lacks `title`, so the page shows the placeholder | Add `title`, then re-render |
-| The rendered page shows `System design report` | The page could not parse its payload | Confirm no `__DESIGN_JSON__` remains, then re-render from `design.json` |
+| `render_report: warning: … has no design title` | `design.json` lacks `title`, so the page heading reads `System design report` | Add `title`, then re-render |
+| The page reads `This is the empty report template` | The payload never reached the page | Re-render with the installed skill's `render_report.py`, never a copied or hand-filled template; if the script's own output still shows this, report it as a renderer defect |
 | Any non-zero `report-diagnostics` value | A `design.json` layout defect | Shorten names or move positions, then re-render |
 | `render_report: no opener found` or `render_report: could not open the report` | A headless session; the file is already written | Hand over the absolute path the script printed: the report is self-contained and portable |
 | No browser tool | Diagnostics and interactions cannot be read | Say the report was rendered but not inspected, and claim nothing it would have shown |
@@ -172,4 +173,4 @@ Finish by answering the ask, not by listing the files written. Go back to what t
 
 ### 10. Record the decision
 
-When the user chooses, set `status: decided`. In repository mode, offer an ADR under `docs/adr/` that records the accepted candidate, rejected candidates, evidence, and consequences. Name the owning documents from step 2 in its Context, mark any ADR it replaces as superseded, and link `DESIGN.md` from wherever the repo indexes its docs. Future runs must read it and not re-litigate it without new evidence.
+When the user chooses, set `status: decided` and `decided` to the chosen architecture's id, then regenerate `DESIGN.md`, whose frontmatter carries both. In repository mode, offer an ADR under `docs/adr/` that records the accepted candidate, rejected candidates, evidence, and consequences. Name the owning documents from step 2 in its Context, mark any ADR it replaces as superseded, and link `DESIGN.md` from wherever the repo indexes its docs. Future runs must read it and not re-litigate it without new evidence.
