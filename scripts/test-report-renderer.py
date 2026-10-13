@@ -535,6 +535,31 @@ def assert_report_geometry(design_path: Path, route: str) -> str:
         return design.get("title", design_path.stem)
 
 
+def assert_unembeddable_designs_fail_before_writing() -> None:
+    # Python's json accepts NaN and any top-level value; the page's JSON.parse
+    # accepts neither, so either one used to ship an empty-template report.
+    cases = {
+        "nan": '{"title": "T", "n": NaN}',
+        "infinity": '{"title": "T", "n": -Infinity}',
+        "list": '[{"title": "T"}]',
+    }
+    with tempfile.TemporaryDirectory() as directory:
+        for name, text in cases.items():
+            design_path = Path(directory) / f"{name}.json"
+            design_path.write_text(text)
+            report_path = Path(directory) / f"{name}.html"
+            result = subprocess.run(
+                [sys.executable, str(RENDER_SCRIPT), "--design", str(design_path),
+                 "--out", str(report_path), "--no-open"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            assert result.returncode == 2, f"{name}: exit {result.returncode}: {result.stderr}"
+            assert result.stderr.startswith("render_report: "), f"{name}: {result.stderr}"
+            assert not report_path.exists(), f"{name}: a report was written"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--design", type=Path, default=DEFAULT_DESIGN)
@@ -544,6 +569,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    assert_unembeddable_designs_fail_before_writing()
     title = assert_report_geometry(args.design, args.route)
     assert_legacy_interfaces_render_as_dashes(args.design)
     assert_debt_tab_renders(args.design)
