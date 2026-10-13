@@ -42,15 +42,24 @@ def read_template() -> str:
     return template
 
 
+def reject_constant(name: str) -> NoReturn:
+    # Python accepts NaN and Infinity; the page's JSON.parse does not, and a
+    # payload it cannot parse renders as the empty template with exit 0.
+    raise ValueError(f"{name} is not valid JSON")
+
+
 def read_design(design_path: Path) -> dict:
     try:
         text = design_path.read_text()
     except OSError as error:
         fail(f"cannot read design {design_path}: {error}")
     try:
-        return json.loads(text)
-    except json.JSONDecodeError as error:
+        design = json.loads(text, parse_constant=reject_constant)
+    except ValueError as error:
         fail(f"malformed JSON in {design_path}: {error}")
+    if not isinstance(design, dict):
+        fail(f"{design_path} must hold a JSON object, found {type(design).__name__}")
+    return design
 
 
 def encode(design: dict) -> str:
