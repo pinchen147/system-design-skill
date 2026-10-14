@@ -80,8 +80,15 @@ def run_case(prompt: str, args: argparse.Namespace) -> Observation:
         process = subprocess.Popen(
             command, cwd=workdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
-        # A run that stalls without output must not block the whole batch.
-        timer = threading.Timer(args.timeout, process.kill)
+        # A run that stalls must not block the batch, and must not pass a
+        # negative case by never reaching a decision.
+        timed_out = threading.Event()
+
+        def expire() -> None:
+            timed_out.set()
+            process.kill()
+
+        timer = threading.Timer(args.timeout, expire)
         timer.start()
         invoked, action, cost = False, "", 0.0
         assert process.stdout is not None
@@ -101,6 +108,8 @@ def run_case(prompt: str, args: argparse.Namespace) -> Observation:
             process.kill()
         _, stderr = process.communicate()
         timer.cancel()
+        if timed_out.is_set() and not invoked:
+            return Observation(False, action, cost, f"timed out after {args.timeout:.0f}s")
         if not action and process.returncode not in (0, -9):
             return Observation(False, "", cost, stderr.strip().splitlines()[-1] if stderr.strip() else "no output")
         return Observation(invoked, action, cost)
@@ -153,7 +162,7 @@ def main() -> None:
         agreeing = hits if expected else graded - hits
         passed = graded > 0 and agreeing * 2 > graded
         failures += not passed
-        actions = ", ".join(sorted({run.first_action or run.error for run in runs}))
+        actions = ", ".join(sorted({run.error or run.first_action for run in runs}))
         mark = "ok  " if passed else "FAIL"
         print(f"{mark} {case['label']:<20} {str(expected).lower():<7} {hits}/{len(runs):<6} "
               f"{case['expectedMode']:<18} {actions}")
