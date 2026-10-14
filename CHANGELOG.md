@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## 1.3.1 — 2026-10-14
+
+### Added
+
+- `scripts/eval-invocation.py` sends every invocation fixture to a headless Claude Code session that loads only this plugin, and grades whether the skill was invoked. Discovery is decided by the description alone, so a description change is now measured against a live agent before it ships rather than approved by reading it.
+
+### Fixed
+
+- A small architecture choice with numbers attached never reached the skill. The first live run passed 12 of 14 fixtures: both direct-answer cases, sharding at 20 writes per second and cache-aside versus write-through at 10 writes and 500 reads per second, were answered without invoking it in 3 of 3 runs, so the overengineering gates never ran. The description now names that ask, and all 14 cases pass in 3 of 3 runs, the five that must not invoke included.
+
 ## 1.3.0 — 2026-10-13
 
 ### Added
