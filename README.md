@@ -243,6 +243,14 @@ The skill is plain Markdown plus a self-contained report renderer:
 
 Everything is inspectable and editable. The renderer runs locally and sends no repository or design data to a service.
 
+Whether an agent reaches for the skill is decided by its description alone, so a description change is checked against a live agent rather than read and approved. [`scripts/eval-invocation.py`](scripts/eval-invocation.py) sends each prompt in [`docs/evaluations/invocation-cases.json`](docs/evaluations/invocation-cases.json) to a headless Claude Code session that loads only this plugin, and reports which prompts invoked the skill:
+
+```bash
+python3 scripts/eval-invocation.py --runs 3
+```
+
+Each run stops at the first Skill call or after three turns. `--host user` repeats the check against your own installed skills and settings.
+
 ## Support and security
 
 - Ask usage questions or report bugs through [GitHub Issues](https://github.com/pinchen147/system-design-skill/issues).
