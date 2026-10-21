@@ -58,12 +58,16 @@ def read(path):
         raise
 
 
-def safe_path(root, relative):
+def relative_path(relative):
     if not isinstance(relative, str) or not relative or Path(relative).is_absolute():
         reject('invalid_path', 'Source paths must be nonempty root-relative paths.')
-    path = root / relative
     if '..' in Path(relative).parts:
         reject('invalid_path', 'Parent traversal is not a source path.')
+    return Path(relative)
+
+
+def safe_path(root, relative):
+    path = root / relative_path(relative)
     try:
         path.resolve().relative_to(root.resolve())
     except ValueError:

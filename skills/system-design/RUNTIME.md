@@ -29,7 +29,7 @@ Every command requires `--design`. `--root` defaults to the current directory an
 
 | Command | Effect |
 |---|---|
-| `status` | Read canonical records and inspect source freshness; no writes. `freshnessChangesPending` means resume must persist invalidation. |
+| `status` | Return inspected records with pending freshness invalidations applied in memory; no writes. The SHA identifies canonical bytes. `freshnessChangesPending` means resume must persist invalidation. |
 | `init` | Add a new session and empty record collections to an existing design. Refuses to reset an initialized design. |
 | `record-evidence` | Capture source byte hashes and append immutable evidence under a new ID. |
 | `record-question` | Insert or replace one question by ID. |

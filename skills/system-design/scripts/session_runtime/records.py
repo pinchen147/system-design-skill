@@ -1,6 +1,6 @@
 """Validate investigation records without asserting the truth of their claims."""
 import re
-from .storage import digest, reject, safe_path
+from .storage import RuntimeErrorDetail, digest, reject, relative_path, safe_path
 
 KINDS = {'record-evidence': 'evidence', 'record-unknown': 'unknowns',
          'record-question': 'questions', 'record-check': 'checks'}
@@ -77,7 +77,7 @@ def validate_record(kind, value, root):
             reject('invalid_record', 'sources must be an array.')
         for source in value['sources']:
             shape(source, {'path', 'sha256'})
-            safe_path(root, source.get('path'))
+            relative_path(source.get('path'))
             if not isinstance(source.get('sha256'), str) or not re.fullmatch('[0-9a-f]{64}', source['sha256']):
                 reject('invalid_record', 'Source requires its SHA-256.')
         if not value['sources'] and not value['references']:
@@ -140,7 +140,7 @@ def freshness(evidence, root):
         try:
             path = safe_path(root, source['path'])
             current = digest(path.read_bytes())
-        except OSError:
+        except (OSError, RuntimeErrorDetail):
             return 'unknown'
         if current != source['sha256']:
             return 'stale'

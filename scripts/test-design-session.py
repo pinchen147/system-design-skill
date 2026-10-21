@@ -136,6 +136,24 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(json.loads(self.design.read_text())['investigation']['checks'][0]['status'], 'unknown')
         self.assertEqual((self.root / 'design.history' / (hashlib.sha256(damaged).hexdigest()+'.json')).read_bytes(), damaged)
 
+    def test_source_replaced_by_symlink_becomes_unknown(self):
+        self.initialize()
+        self.call('record-evidence', self.evidence())
+        self.call('record-check', {'id':'c','check':'x','status':'pass','evidenceRefs':['ev-one'],'detail':'reviewed'})
+        source = self.root / 'source.py'
+        source.unlink()
+        target = self.root / 'target.py'
+        target.write_text('value = 1\n')
+        source.symlink_to(target)
+        status = self.call('status')
+        self.assertTrue(status['freshnessChangesPending'])
+        self.assertEqual(status['investigation']['checks'][0]['status'], 'unknown')
+        self.assertEqual(status['investigation']['evidence'][0]['freshness'], 'unknown')
+        self.call('resume')
+        state = json.loads(self.design.read_text())['investigation']
+        self.assertEqual(state['evidence'][0]['freshness'], 'unknown')
+        self.assertEqual(state['checks'][0]['status'], 'unknown')
+
     def test_invalid_investigation_has_recovery_context(self):
         for investigation in [None, [], {'session': {}}]:
             self.design.write_text(json.dumps({'version': 2, 'investigation': investigation}))

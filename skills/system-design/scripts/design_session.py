@@ -64,6 +64,9 @@ def execute(args):
             projected = parse(raw)
             refresh(projected, root)
             result['freshnessChangesPending'] = projected != document
+            result['investigation'] = projected['investigation']
+            if result['freshnessChangesPending']:
+                result['nextAction'] = 'Run resume with --expected-sha256 ' + digest(raw) + ' to persist these inspected invalidations.'
             if command == 'validate' and result['freshnessChangesPending']:
                 reject('stale_evidence', 'Source bytes changed or became unavailable.', 'Run resume with the current design SHA, then re-evaluate affected claims.', ['--expected-sha256'])
         return result
