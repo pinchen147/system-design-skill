@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
@@ -43,6 +44,29 @@ class SessionTests(unittest.TestCase):
         return {'id': identity, 'claim': 'source defines value', 'type': 'observed',
                 'scope': 'source.py bytes', 'limitations': ['Static observation only'],
                 'sources': [{'path': 'source.py'}], 'references': []}
+
+    def test_copied_skill_runs_outside_source_checkout(self):
+        installed = self.root / 'installed skill'
+        shutil.copytree(CLI.parents[1], installed, ignore=shutil.ignore_patterns('__pycache__'))
+        copied_cli = installed / 'scripts/design_session.py'
+        unrelated = self.root / 'unrelated'
+        unrelated.mkdir()
+        result = subprocess.run(
+            [sys.executable, str(copied_cli), 'init', '--design', str(self.design),
+             '--root', str(self.root), '--expected-sha256', self.sha()],
+            cwd=unrelated, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertTrue(json.loads(result.stdout)['ok'])
+        output = self.root / 'report.html'
+        rendered = subprocess.run(
+            [sys.executable, str(installed / 'scripts/render_report.py'),
+             '--design', str(self.design), '--out', str(output), '--no-open'],
+            cwd=unrelated, text=True, capture_output=True)
+        self.assertEqual(rendered.returncode, 0, rendered.stderr)
+        html = output.read_text(encoding='utf-8')
+        self.assertNotIn('__DESIGN_JSON__', html)
+        self.assertIn('"investigation"', html)
+        self.assertIn('"title": "Example"', html)
 
     def test_legacy_is_readable_and_init_preserves_content(self):
         old = self.design.read_bytes()
