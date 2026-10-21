@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## 1.3.4 — 2026-10-21
+
+### Fixed
+
+- Treat timeouts as unknown caller observations in payment and workflow contracts, calculate recovery in time units, and include UUIDv7 as a time-ordered alternative.
+
+## 1.3.3 — 2026-10-21
+
+### Fixed
+
+- Apply conversion once in unit economics, distinguish avoidable loss from gross revenue, and scope package withdrawal rules to npm.
+
+## 1.3.2 — 2026-10-21
+
+### Fixed
+
+- Read and write reports explicitly as UTF-8 and report invalid Unicode through the existing diagnostic.
+
 ## 1.3.1 — 2026-10-14
 
 ### Added

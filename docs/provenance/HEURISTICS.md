@@ -99,6 +99,11 @@ determine transaction locality — ownership, atomic invariants, and datastore c
 | Concurrency = arrival rate × service time | https://web.mit.edu/~sgraves/www/papers/Little's%20Law-Published.pdf |
 | Retries multiply offered load exactly when capacity is lowest | https://sre.google/sre-book/handling-overload/ · https://sre.google/sre-book/addressing-cascading-failures/ |
 
+| Input events × conversion = orders; revenue/input event includes conversion, revenue/order does not | Derived dimensional accounting: both bases yield input events × conversion × basket × take-rate. Conversion must occur once in daily revenue. |
+| 3,000 clicks/day × 0.03 orders/click × $35/order × 0.08 = $252/day | Derived illustrative arithmetic; no claim about measured revenue or attribution loss. |
+| Infrastructure payback needs positive incremental net benefit against a baseline | Definition of simple payback applied to incremental contribution or savings; gross revenue is not automatically an infrastructure benefit. |
+| Lost attribution does not by itself prove lost transactions; prevention costs need an explicit causal loss estimate | Inference boundary: missing measurement alone does not establish transaction failure. Estimate affected fraction, recoverability, consequences, and uncertainty; required correctness, contractual, and compliance constraints remain binding. |
+
 ## Style ratings matrix
 
 | Claim | Source |

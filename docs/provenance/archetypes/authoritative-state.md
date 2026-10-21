@@ -14,7 +14,7 @@ Sources for the runtime pack. Return to the [archetype provenance index](../ARCH
 |---|---|
 | The network authorizes on an unreachable issuer's behalf and the issuer must settle what was approved — the reason CP-everywhere was false | Visa Interlink Core Rules, stand-in processing |
 | Balanced immutable double-entry postings | https://docs.tigerbeetle.com/coding/financial-accounting/ |
-| Idempotency keys with a retention window | https://docs.stripe.com/api/idempotent_requests |
+| Idempotency keys with a retention window; timeout alone does not determine the provider outcome | https://docs.stripe.com/api/idempotent_requests · Runtime shared state-survival contract distinguishes caller UNKNOWN from reconciling authoritative state. |
 
 ## Single-authority ordered state
 
@@ -25,7 +25,8 @@ Sources for the runtime pack. Return to the [archetype provenance index](../ARCH
 | Consumers detect gaps by sequence number and request retransmission | https://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/NQTVITCHSpecification.pdf |
 | Cancel and replace as first-class ordered commands | https://www.nasdaqtrader.com/content/technicalsupport/specifications/TradingProducts/Ouch5.0.pdf |
 | Deterministic replay as a recovery and testing primitive | https://www.foundationdb.org/files/fdb-paper.pdf |
-| 100,000 × 86,400 = 8.64e9; ÷ 6e6/s = 1,440 s = 24 min | derived |
+| 100,000 × 86,400 = 8.64e9; ÷ 6e6/s = 1,440 s = 24 min | derived illustrative replay-only duration, excluding restore/failover overhead; actual replay throughput must be measured. |
+| Recovery duration = restore duration + retained commands / measured replay throughput + failover and validation overhead | Derived dimensional accounting; snapshot age and arrival rate determine the retained-command count. |
 
 ## Replicated authoritative store
 
@@ -41,6 +42,7 @@ Sources for the runtime pack. Return to the [archetype provenance index](../ARCH
 
 | Claim | Source |
 |---|---|
+| UUIDv7 is a 128-bit time-ordered alternative; local monotonicity does not imply cross-writer causal order | https://www.rfc-editor.org/rfc/rfc9562.html sections 5.7 and 6.2 |
 | A 64-bit ID layout with 41 timestamp, 10 worker, and 12 sequence bits, plus clock-regression handling | https://github.com/twitter-archive/snowflake/tree/snowflake-2010 |
 | 41 milliseconds-of-epoch bits provide approximately 69 years | derived from the sourced Snowflake layout: 2^41 ms ÷ 365.2425 days/year ≈ 69.7 years |
 | Base-62 encoding of a unique integer remains unique; 62^7 = 3,521,614,606,208 | derived |

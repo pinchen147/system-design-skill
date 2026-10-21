@@ -16,6 +16,7 @@ Sources for the runtime pack. Return to the [archetype provenance index](../ARCH
 
 | Claim | Source |
 |---|---|
+| Timeout is an unknown caller observation, not an authoritative terminal outcome; retries retain operation identity under endpoint-specific semantics | https://docs.stripe.com/error-low-level — provider example; the runtime generalizes the uncertainty boundary, not Stripe’s retention window. |
 | History caps near 51,200 events / 50 MB, warning at 10,240 / 10 MB | https://docs.temporal.io/workflow-execution/limits |
 | Visibility timeout default 30 s, maximum 12 h; at-least-once means duplicates | https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html |
 | The same program may be started twice even at parallelism 1 — steps must be idempotent | https://kubernetes.io/docs/concepts/workloads/controllers/job/ |
