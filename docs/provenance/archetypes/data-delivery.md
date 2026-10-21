@@ -16,7 +16,7 @@ Sources for the runtime pack. Return to the [archetype provenance index](../ARCH
 
 | Claim | Source |
 |---|---|
-| 72-hour withdrawal window; past it, no dependents, under 300 weekly downloads, single owner; a used version identifier can never be reused | https://docs.npmjs.com/policies/unpublish |
+| npm Public Registry example: newly created packages within 72 hours with no registry dependents; alternatively no registry dependents, fewer than 300 downloads in the last week, and one owner/maintainer; used package@version cannot be reused. Other registries require their own policy review. | https://docs.npmjs.com/policies/unpublish/ (verified 2026-10-11) |
 | A version identifies an immutable snapshot, authenticated by a checksum database | https://go.dev/ref/mod |
 | Role separation, threshold signatures, expiring freshness metadata defeating replay | https://theupdateframework.github.io/specification/latest/ |
 | Provenance attestation and hermetic build levels | https://slsa.dev/spec/ |

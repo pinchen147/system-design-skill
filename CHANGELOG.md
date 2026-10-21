@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 1.3.3 — 2026-10-21
+
+### Fixed
+
+- Apply conversion once in unit economics, distinguish avoidable loss from gross revenue, and scope package withdrawal rules to npm.
+
 ## 1.3.2 — 2026-10-21
 
 ### Fixed
