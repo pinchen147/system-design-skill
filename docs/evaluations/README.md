@@ -1,6 +1,6 @@
 # Invocation evaluation
 
-Run `python3 scripts/eval-invocation.py --runs 3 --output-dir /tmp/system-design-invocation-NEW` before changing the skill description. Choose a new output directory for each run; existing directories are rejected to preserve prior evidence. Fixtures in [invocation-cases.json](invocation-cases.json) define expected discovery. Change an incorrect fixture in a separate commit with its reason.
+After changing the skill description, run `python3 scripts/eval-invocation.py --runs 3 --output-dir /tmp/system-design-invocation-NEW` before shipping it. Choose a new output directory for each run; existing directories are rejected to preserve prior evidence. Fixtures in [invocation-cases.json](invocation-cases.json) define expected discovery. Change an incorrect fixture in a separate commit with its reason.
 
 ## What passes
 

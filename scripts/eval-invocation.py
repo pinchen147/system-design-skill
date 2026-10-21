@@ -103,6 +103,10 @@ def run_case(prompt: str, args: argparse.Namespace, directory: Path) -> dict:
                             process.kill()
                     except ProcessLookupError:
                         pass
+                    except PermissionError:
+                        # Sandboxed hosts may deny signaling an already-exited group.
+                        if process.poll() is None:
+                            raise
 
                 def expire() -> None:
                     # Descendants can still hold stdout open after the parent exits.
@@ -119,6 +123,9 @@ def run_case(prompt: str, args: argparse.Namespace, directory: Path) -> dict:
                         event = json.loads(line)
                         if not isinstance(event, dict):
                             raise ValueError("event must be an object")
+                        if terminal is not None and event.get("type") == "assistant":
+                            protocol_error = "assistant event after terminal result"
+                            break
                         if event.get("type") == "assistant":
                             observation.first_action = observation.first_action or (first_action(event) or "")
                             if is_this_skill(event):
@@ -133,7 +140,7 @@ def run_case(prompt: str, args: argparse.Namespace, directory: Path) -> dict:
                             terminal = event
                     except (ValueError, TypeError, AttributeError, KeyError) as exc:
                         protocol_error = f"invalid stream event: {exc}"
-                if observation.invoked:
+                if observation.invoked or protocol_error:
                     timer.cancel()
                     stop_process()
                 process.wait()

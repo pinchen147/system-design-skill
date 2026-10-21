@@ -61,6 +61,11 @@ class InvocationCLI(unittest.TestCase):
                 run = self.run_eval(body)
                 self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
 
+    def test_skill_after_terminal_result_cannot_override_failure(self):
+        run = self.run_eval("result(subtype='error_max_turns', is_error=True)\nemit({'type':'assistant','message':{'content':[{'type':'tool_use','name':'Skill','input':{'skill':'system-design'}}]}})\ntime.sleep(3)",
+                            label=POSITIVE)
+        self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+
     def test_invalid_trial_blocks_majority_without_retry(self):
         counter = self.directory / "count"
         body = f"from pathlib import Path\np = Path({str(counter)!r})\n"
