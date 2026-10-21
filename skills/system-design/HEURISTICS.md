@@ -6,12 +6,25 @@ This file owns the reusable mechanisms and every decision ladder. [ARCHETYPES.md
 
 ## Contents
 
+- [Evidence and uncertainty](#evidence-and-uncertainty) — canonical records, freshness, scoped conclusions, and recovery
 - [The laws](#the-laws) · [Characteristics](#characteristics-extract-then-pick-three) · [The envelope](#the-envelope) — formulas, latency and availability numbers, calibration anchors
 - Decision rules: [Data model](#data-model) · [Storage engine](#storage-engine) · [Schema and encoding evolution](#schema-and-encoding-evolution) · [Caching](#caching)
 - [Replication and consistency](#replication-and-consistency) · [State survival and recovery](#state-survival-and-recovery) · [Partitioning](#partitioning) · [Transactions](#transactions) — the ladders live here, not in the archetypes
 - [Async and streaming](#async-and-streaming) · [Interfaces and dependency contracts](#interfaces-and-dependency-contracts) · [Scaling substrate](#scaling-substrate)
 - [Style ratings matrix](#style-ratings-matrix) — priors for generating candidates, never evidence for one
 - [Anti-overengineering gates](#anti-overengineering-gates) — cite when a candidate outruns its envelope
+
+## Evidence and uncertainty
+
+Keep one canonical investigation register in `design.json`; summaries and reports are views of it. Record each load-bearing claim as **observed**, **derived**, or **inferred**, with a source locator, scoped source bytes or revision when available, and limitations. A content digest identifies evidence; it does not authenticate a source or establish the truth of the claim. Keep raw evidence retrievable without repeating its producer.
+
+On resume, compare scoped source bytes, including staged, unstaged, and untracked work. Changed or inaccessible evidence makes dependent conclusions unverified until re-established. A newer contradiction remains visible; an older passing check cannot silently replace it. Preserve historical records and human decisions.
+
+Unknowns state the question, missing evidence, and next resolving observation. Resolve one only with sufficient current evidence; a schema-valid record or a model’s confidence is insufficient. A verifier that cannot decide records unknown. Missing coverage establishes neither absence nor refutation.
+
+Separate candidate generation, recommendation selection, and artifact delivery. Keep the actual recommendation and its evidence, rather than reporting the best unselected option as the outcome. Structural validation, semantic review, and browser inspection have different scopes and separate results. Stop investigation when the requested question is answered within its stated scope or the next step requires unavailable evidence; preserve that boundary instead of manufacturing certainty.
+
+Recover according to the failed operation: re-read after a stale-write rejection, inspect a checkpoint after corrupt state, and re-render retained JSON after a delivery failure. Recovery preserves the record; it does not supply missing proof. See [RUNTIME.md](RUNTIME.md) for command contracts.
 
 ## The laws
 

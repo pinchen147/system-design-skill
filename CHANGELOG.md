@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## 1.4.0 — 2026-10-21
+
+### Added
+
+- Bundled Python CLI for tracked evidence, questions, unknowns, checks, stale-write protection, source freshness, and explicit checkpoint recovery. The installed coding agent supplies reasoning; no model SDK or server is required.
+- Additive investigation display in reports, including legacy coverage limitations and separate check outcomes.
+- Research provenance for the evidence lifecycle and scoped verification contracts.
+
+### Fixed
+
+- Undecidable audit checks remain unknown instead of becoming refutations or survived attempts.
+- Invocation evaluation rejects incomplete/error trials, retains optional attempt evidence, and reports unavailable costs honestly.
+
 ## 1.3.4 — 2026-10-21
 
 ### Fixed

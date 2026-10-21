@@ -4,7 +4,7 @@ description: Design or evolve a production system from repository evidence, meas
 license: MIT
 metadata:
   author: pinchen147
-  version: "1.3.4"
+  version: "1.4.0"
 ---
 
 # System Design
@@ -17,7 +17,7 @@ Every recommendation must cite an envelope number, a correctness invariant, a na
 
 Do not load examples by default. Only if a first-draft recommendation or interface remains generic, consult the matching BAD/GOOD contrast in [EXAMPLES.md](EXAMPLES.md), then replace generic language with the relevant number, invariant, ownership boundary, or failure behavior.
 
-A run writes only its own artifacts: `design.json` and `DESIGN.md` in the design directory, the rendered report under `${TMPDIR:-/tmp}`, and, at step 10, the ADR and docs-index link the user accepts. Implementing a candidate or changing code is a separate request.
+A run writes only its own artifacts: `design.json`, its tracked JSON checkpoints, and `DESIGN.md` in the design directory, the rendered report under `${TMPDIR:-/tmp}`, and, at step 10, the ADR and docs-index link the user accepts. Implementing a candidate or changing code is a separate request.
 
 ## Route the ask
 
@@ -44,7 +44,7 @@ When the process does run, draw the simplest production-viable design first. Add
 
 List existing designs—`docs/design/*/design.json`, or `./*/design.json` outside a git repo—and read each one's `slug`, `title`, and `status`. If one covers this ask, load it and apply the user's feedback before doing new discovery; if two could, name both and ask which.
 
-A loaded design that records `context.observed.commit` says which code it described. Run `git diff --stat <commit>..HEAD`; at step 2, once the in-scope paths are classified, re-read the ones it lists rather than the whole tree. When the history no longer contains that commit, or the design recorded `uncommittedChanges: true`, the drift is unknown: read the in-scope tree as if nothing had been recorded.
+A loaded design that records `context.observed.commit` says which code it described. Run `git diff --stat <commit>..HEAD` and inspect current staged, unstaged, and untracked in-scope paths; unchanged HEAD does not identify a changed working tree. At step 2, re-read affected paths and refresh their dependent evidence, questions, and checks using the evidence lifecycle in [HEURISTICS.md](HEURISTICS.md#evidence-and-uncertainty). When the history no longer contains that commit, or the design recorded `uncommittedChanges: true`, the drift is unknown: read the in-scope tree as if nothing had been recorded.
 
 Otherwise derive a kebab-case slug naming the system or subsystem, not the phrasing of the request (`commerce-layer`, not `add-a-commerce-layer`), and choose:
 
@@ -52,6 +52,8 @@ Otherwise derive a kebab-case slug naming the system or subsystem, not the phras
 - **Greenfield mode** when no implementation exists yet.
 
 State the mode, reason, whether you resumed, and the target directory in one line.
+
+For a new artifact-producing run, first create a minimal draft `design.json` with `version: 2`, `slug`, `title`, `mode`, and `status: "draft"` in the chosen directory. Preserve existing designs. Use the bundled [local runtime](RUNTIME.md) to initialize or resume its investigation register. It is part of this installed skill; the existing coding agent supplies reasoning and tools. Read its command help only when needed. Keep the direct-answer route artifact-free. Legacy designs remain readable; initialize their register explicitly without inventing past evidence. Reuse current records, inspect stale ones, and follow a returned recovery action before repeating discovery.
 
 ### 2. Establish the current truth
 
@@ -67,6 +69,8 @@ In both modes, define:
 - system interfaces and their consistency/idempotency contracts;
 - critical end-to-end flows, including failure and recovery flows;
 - source-of-truth stores versus derived views.
+
+Record load-bearing observations, derivations, and inferences with source identity, scope, and limitations in `investigation.evidence`; retain unanswered parts of the ask in `investigation.questions` and missing proof in `investigation.unknowns`. Use the [evidence lifecycle](HEURISTICS.md#evidence-and-uncertainty). A schema-valid record does not prove its claim.
 
 Ask the user only for decisions that cannot be recovered from the repo or prompt.
 
@@ -133,17 +137,17 @@ Before rendering, verify:
 
 Repository mode only, and only now: a finding's exposure is measured against the candidate this run recommends, which did not exist until the previous step. Greenfield has no implemented architecture to compare against and skips this step entirely.
 
-Follow [AUDIT.md](AUDIT.md). The order of its stages is the substance, not the ceremony: collect the structural facts—graph, edge contracts, ADR statuses, change history—before forming any verdict; generate candidate findings one category at a time, without showing the finder the previous run's list; put every candidate through the mechanical gates; hand the survivors to a red team that sees the claim but never the argument behind it. A model is an unreliable detector of architectural problems and a reliable disprover of them, so nothing reaches the report until something has tried to destroy it.
+Follow [AUDIT.md](AUDIT.md). The order of its stages is the substance, not the ceremony: collect the structural facts—graph, edge contracts, ADR statuses, change history—before forming any verdict; generate candidate findings one category at a time, without showing the finder the previous run's list; put every candidate through the mechanical gates; hand the survivors to a red team that sees the claim but never the argument behind it. Both finders and verifiers can be wrong. Record the check and its evidence; an undecidable check remains unknown rather than becoming refutation or confirmation.
 
-Where a subagent primitive exists, run one finder per category and one verifier per lens. Where it does not, run the same stages inline, restating the brief and discarding the previous stage's reasoning at each boundary. A single pass that finds and judges at once is the one shape that does not work.
+Where a subagent primitive exists, run one finder per category and one verifier per lens. Where it does not, run the same stages inline, restating the brief and discarding the previous stage's reasoning at each boundary. Keep finding and judging separate; separation reduces shared context but does not establish independent accuracy.
 
 Write the result into `design.json` under `debt`, including what was checked and what could not be established. Findings may seed `risks` and `nextSteps`; they never generate a candidate, and they never become an ADR.
 
-The audit is done when every finding cites evidence and passes all four debt tests, every `blocking` finding names by id the invariant or target it violates, and `debt.checked` lists every category examined, with every check the run could not establish recorded rather than dropped.
+The audit is done when every newly confirmed finding cites evidence and passes all four debt tests, every `blocking` finding names by id the invariant or target it violates, and `debt.checked` lists every category examined. Retain historical findings whose current checks are unknown with that limitation visible; do not present them as newly confirmed. Record every check the run could not establish rather than dropping it.
 
 ### 9. Write, render, and verify
 
-Write `design.json` and regenerate `DESIGN.md` beside it, preserving any user-owned `## Notes` verbatim. Validate all ids and flow references.
+Write `design.json` and regenerate `DESIGN.md` beside it, preserving any user-owned `## Notes` verbatim. Include the investigation’s question outcomes, evidence references, unresolved checks, and freshness limitations. Validate all ids and flow references. Use [RUNTIME.md](RUNTIME.md) for checkpointed record updates and structural validation; its success validates supported record contracts, not the architecture. Record structural checks, semantic review, and browser inspection separately in `investigation.checks`, citing what actually ran. A missing browser check is unknown, not passed.
 
 Then render and open it. The run is not complete until the report exists on disk and has been opened, or its path handed over where nothing can open it—a design.json and a DESIGN.md with no report is an unfinished run, not a finished one.
 

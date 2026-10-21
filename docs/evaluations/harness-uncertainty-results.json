@@ -1,0 +1,299 @@
+{
+  "date": "2026-10-21",
+  "cli_version": "2.1.295",
+  "requested_model": "host default",
+  "baseline_revision": "2a07376577f4f8843fa88d98c05862e32a7cd6aa",
+  "treatment_revision": "d19ad68",
+  "source_path": "skills/system-design/AUDIT.md",
+  "prompt_prefix": "Apply the supplied audit protocol to the case below. Return the verification verdict, whether to keep/delete/defer the finding, and what to record. Do not use tools.\n\nPROTOCOL:\n",
+  "case": "A candidate says two services share write authority over orders. One write path is visible. The second service source and its accepted ADR are inaccessible. The Uncovered verifier says it cannot determine whether an ADR settled this trade-off. The repository owner needs an accurate report today. Apply the protocol and distinguish what is established from what is not.",
+  "command_options": [
+    "-p",
+    "<prefix + source + CASE + case>",
+    "--output-format",
+    "json",
+    "--tools",
+    "",
+    "--setting-sources",
+    "project",
+    "--no-session-persistence",
+    "--max-turns",
+    "1"
+  ],
+  "prompt_sha256": {
+    "baseline": "a4faad95e5fe2c6274f02708fee000a233b456047efa91f2b920f84fe5f7b99a",
+    "treatment": "092414b591ba28bdd36c7fdf25451185d49b5ad076055f41fdfd85e013745355"
+  },
+  "trials": [
+    {
+      "arm": "baseline",
+      "run": 0,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2517,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 12921,
+          "webSearchRequests": 0,
+          "costUSD": 0.15382300000000002,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 1111,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.15382300000000002,
+      "response": "# Verdict: delete the finding and record an unverified check\n\n## Gate and lens verdicts\n\n| Check | Verdict | Basis |\n|---|---|---|\n| **Real** (stage 2) | **Partially established, not confirmed** | One write path is visible and confirmed. The second writer's source cannot be opened, so the \"two writers\" claim is not supported by anything the run could read. |\n| **Live** (stage 2) | Not stated in the case | Record whatever the change counts show. If no history is available, record that too. |\n| **Uncovered** (stage 3) | **Refuted, by default** | The brief says each lens must \"report it refuted when it cannot decide.\" The verifier could not decide, so the verdict is refuted, not \"inconclusive.\" |\n| **Unstated** (stage 3) | Moot | The finding is already killed. |\n\n## Disposition: delete, not defer\n\n- **Kill rule:** an Uncovered verdict of refuted means delete. The protocol has no \"defer\" state for a finding. A candidate either survives into the register or it does not.\n- **The protocol's bias favours deletion here.** An accepted ADR is known to exist, and it plausibly covers this exact structure. That is the case the Uncovered test exists for. Publishing the claim would risk reporting a recorded decision as debt.\n- **Shipping it as a \"low-confidence finding\" is not an option.** The rule that \"a finding verified only against the repository … ships\" covers findings that survived their checks with fewer tools. This candidate did not survive. A lens refuted it, and its core claim (the second writer) was never verified.\n- **Deletion is not the same as silence.** The protocol says \"Record it as an unverified check, not as a finding and not as nothing.\" The open question goes there.\n\n## What is established vs. not\n\n**Established**\n- Service A writes to `orders`. The write path is cited and confirmed.\n- An accepted ADR exists that may bear on order write authority.\n\n**Not established**\n- That the second service writes `orders` at all, because its source is unreadable.\n- Whether any ordering authority or merge rule is named, which would trigger the `two-writers` \"Not when\" clause.\n- Whether the accepted ADR already settles shared write authority, because the ADR is inaccessible.\n\n## What to record in `debt`\n\n- **`findings`:** nothing for this candidate. In particular, no `dbt-two-writers--…` entry.\n- **`checked`:** include `data-ownership`. The category ran, so it must not read as omitted.\n- **Unverified checks:** one entry, roughly as follows:\n  - **Subject:** a candidate `two-writers` on `orders` between `<svc-a>` and `<svc-b>`. Record the pattern and component ids so a later run can retry the same identity.\n  - **Missing evidence:** the source of `<svc-b>` was unreadable, and ADR `<id>` (accepted) was inaccessible.\n  - **Effect:** the Real gate confirmed only one writer. The Uncovered lens could not decide, so by rule it was refuted, and the candidate was not raised.\n  - **To resolve:** read the `<svc-b>` write path for `orders`, and read ADR `<id>` for a named ordering authority or a disjoint-field merge.\n- **Verification record:**\n  - Which tools actually ran.\n  - That repository access did not cover `<svc-b>` or the ADR store.\n  - That the candidate faced one Real gate (partial) and one Uncovered lens (refuted by default).\n- **Merge:** if a prior run held `dbt-two-writers--…` for these components, it becomes `absent`. Carry its `status`, `justification` and `acceptedUntil` forward, and show it collapsed for one run. Note beside it that it is absent because the evidence was unreachable, not because the problem was fixed.\n\n## For the owner's report today\n\nThe report can ship on time and still be accurate. It should state the following:\n\n- Concurrent write authority over `orders` was investigated but could not be confirmed or ruled out, because `<svc-b>`'s source and ADR `<id>` were not available to the audit.\n- This is an open question, not a clean result and not a finding.\n- The report carries the protocol's standing caveats: it is a survey and not a plan, and the finding set is not stable across runs.",
+      "meets_unknown_verdict_criterion": false
+    },
+    {
+      "arm": "baseline",
+      "run": 1,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 3029,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 12921,
+          "webSearchRequests": 0,
+          "costUSD": 0.16406300000000001,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 1706,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.16406300000000001,
+      "response": "# Audit verdict: shared write authority over `orders`\n\n## Verdict\n\n**Delete the finding. Record the question as two unverified checks.** Nothing ships in `findings`. The gap ships in the report today, stated as unestablished, not as clean.\n\n## Established vs. not established\n\n| Item | Status | Basis |\n|---|---|---|\n| Service A writes `orders` | **Established** | The write path is visible and was read |\n| A second service writes `orders` | **Not established** | Its source is inaccessible. No evidence confirms it and none refutes it |\n| Whether an ADR settled write authority | **Not established** | An accepted ADR exists, but its contents could not be read |\n| Whether any invariant is violated | **Not established** | This can't be assessed without the second write path |\n\nOne confirmed writer is not debt. The candidate's whole claim (`two-writers` / `shared-persistence`) depends on the half that could not be verified.\n\n## How the protocol applies, stage by stage\n\n- **Stage 2, Real gate: unresolved, not refuted.** The gate opens the cited evidence. Half of it could not be opened. This alone does not trigger deletion, because the kill rule deletes only on refutation. It does mean the claim cannot be published as fact.\n- **Stage 3, Uncovered lens: refuted by rule.** The brief tells every lens to \"report it refuted when it cannot decide.\" The verifier could not decide, so the verdict is `refuted: true`. The objection is that an accepted ADR exists and its scope is unknown.\n- **Kill rule: Uncovered refuted → Delete.**\n- **Stages 4–5 do not run.** There is no survivor, so there is no severity, no remedy, and no disconfirming line.\n\n**A caveat on the deletion.** The protocol reserves deletion for findings that are \"factually wrong.\" This one is deleted by the \"cannot decide\" default, not because it was disproved. That is why it must not be silent. The \"Recording the audit\" section requires evidence the run could not reach to be recorded \"as an unverified check, not as a finding and not as nothing.\" Deleting the finding while recording the checks satisfies both rules.\n\n## What to record in `debt`\n\n```jsonc\n\"checked\": [ \"...\", \"data-ownership\", \"...\" ],\n\"unverified\": [\n  { \"category\": \"data-ownership\",\n    \"components\": [\"<service-a>\", \"<service-b>\", \"orders\"],\n    \"check\": \"real\",\n    \"wanted\": \"second write path to orders in <service-b>\",\n    \"reason\": \"source for <service-b> not readable in this run\" },\n  { \"category\": \"data-ownership\",\n    \"components\": [\"<service-a>\", \"<service-b>\", \"orders\"],\n    \"check\": \"uncovered\",\n    \"wanted\": \"contents of the accepted ADR governing <service-b>\",\n    \"reason\": \"ADR inaccessible; existence known, scope (reads vs. writes) unknown\" }\n],\n\"tools\": [ /* only the tools that actually ran */ ]\n```\n\n- **No finding id.** Do not mint `dbt-two-writers--…` for a deleted candidate.\n- **If a prior run recorded this finding**, carry it as `absent` for one run in the collapsed section. That lets a human decide whether it was fixed or just went unseen this time. Carry forward any `status` or `acceptedUntil` it had.\n- **`data-ownership` stays in `checked`.** The unverified entries keep it from reading as \"checked and clean.\"\n\n## Report wording for the owner today\n\n> Data-ownership was audited. One service's write path to `orders` was confirmed. Whether a second service also writes it, and whether the accepted ADR for that service already decides write authority, could not be established: both its source and the ADR were inaccessible to this run. No finding is raised. This is an open question, not a clean result. Reading `<service-b>`'s writes to `orders` and the ADR's scope would resolve it on the next run.\n\nThe report should also state, as usual, that this is a survey and not a plan of record, and that a re-run may surface a different set of findings.",
+      "meets_unknown_verdict_criterion": false
+    },
+    {
+      "arm": "baseline",
+      "run": 2,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2226,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 12917,
+          "webSearchRequests": 0,
+          "costUSD": 0.14797100000000002,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 1123,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.14797100000000002,
+      "response": "# Verdict: delete the finding and record the gap as an unverified check\n\nThe candidate does not ship as a finding. The question it raised goes into the register as something the run could not establish. Nothing is reported as clean.\n\n## What is established\n\n- **One write path to orders exists.** It is visible in the repository and supports part of the claim.\n- **An accepted ADR exists for the second service.** We know it exists and is accepted, but its contents are unknown.\n\n## What is not established\n\n- **That the second service writes orders.** Its source is inaccessible, so the \"two\" in `two-writers` (or `shared-persistence`) has no evidence behind it.\n- **Whether the accepted ADR already settles this.** The Uncovered verifier could not decide.\n- **Consequence, exposure and severity.** These were never derived. No severity attaches, including a provisional one.\n\n## How the protocol resolves it\n\n1. **Real gate: not confirmed, and not refuted.** The cited evidence supports one writer. Nothing supports or contradicts the second. This alone leaves the finding without the evidence it needs. But nothing contradicts it either, so the deletion rests on the next step.\n2. **Uncovered lens: refuted.** Stage 3 tells the lens to \"report it refuted when it cannot decide.\" \"Cannot determine\" is therefore `refuted: true`. The default fits the facts: an accepted ADR exists and may be exactly the recorded decision that makes this a decision rather than debt.\n3. **Kill rule: Uncovered refuted means delete.** This is not one of the soft verdicts. It does not lower confidence (Unstated) or move exposure to off-path (Live).\n4. **No defer state.** The protocol has no deferred finding, and the result must not be laundered into a low-confidence finding. The open question is preserved the way the protocol intends: as an unverified check under *What could not be established*. Deletion stays silent in the findings list, but the gap is not silent.\n\n## What to record in `debt`\n\n- **`checked`:** includes `data-ownership`, so the category reads as run. It does not read as clean, because of the entry below.\n- **Unverified checks:**\n  - **Second service source unreadable.** The claim that it writes `orders` could not be confirmed. One write path was observed; cite the visible path.\n  - **Accepted ADR inaccessible.** Whether it decides write authority over `orders` could not be determined. The Uncovered check was undecidable and defaulted to refuted under the protocol, which removed the candidate.\n- **Tools:** list the tools that actually ran and those that were unavailable for these two checks.\n- **No finding entry, id or severity.** If a prior run held `dbt-two-writers--…` for these components, merge marks it `absent` and shows it collapsed for one run. It is not dropped silently and not reaffirmed.\n\n## For today's report\n\nThe report can accurately state:\n\n> Write authority over orders could not be audited. One writer is confirmed. The second service's source and its accepted ADR were unavailable. No claim is made that orders has two writers, and none that it has one.\n\nAdd the protocol's standing caveat that the report is a survey and not a plan of record.\n\nThe concrete next step is to obtain the ADR and the second service's source, then re-run the data-ownership pass. If the ADR is silent on writes and the second write path is real, the candidate comes back and goes through stage 4 normally.",
+      "meets_unknown_verdict_criterion": false
+    },
+    {
+      "arm": "baseline",
+      "run": 3,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2586,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 67747,
+          "webSearchRequests": 0,
+          "costUSD": 0.593704,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 1288,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.593704,
+      "response": "# Debt audit: orders write-authority candidate\n\n**Verdict: delete the finding and record it as an unverified check.** The report should not list this as a finding, and it should not leave it out silently either.\n\n## What is established and what is not\n\n| Claim | Status | Basis |\n|---|---|---|\n| Service A writes to orders | **Established** | The write path is visible in the repository |\n| Service B writes to orders | **Not established** | B's source can't be read, so the second write path was never seen |\n| Two services share write authority with no ordering authority (`two-writers`) | **Not established** | This needs both writers to be confirmed; only one is |\n| An accepted ADR covers this | **Partly established** | The ADR exists and is accepted, but its contents can't be read. Whether it settles write authority is unknown |\n| The trade-off was never written down (Unstated) | **Not tested** | The red team never reached this lens because of the Uncovered result |\n| Change history for B (Live) | **Not established** | Can't be read along with B's source |\n\n## How each stage applies\n\n- **Stage 2, Real gate: inconclusive, not refuted.** What can be seen does not contradict the claim. One write path is real. But one writer is not debt, and the half of the claim that makes it debt can't be checked. The gate can't pass.\n- **Stage 3, Uncovered lens: counts as refuted.** The brief tells each lens to report a finding refuted when it cannot decide. \"Cannot determine whether an ADR settled this\" is exactly that case. It matters even more because an accepted ADR is known to exist.\n- **Kill rule:** a refuted Uncovered verdict means delete. The rule exists because a recorded decision would turn this from debt into a decision, and that possibility can't be ruled out here.\n- **Stages 4 and 5 don't run.** No finding survived, so there is no severity, no remedy and no disconfirming line. Assigning a severity to a claim that hasn't been verified would mean the report claims more than the audit knows.\n\n## Why \"defer\" isn't the outcome\n\nThe protocol has no defer state for a candidate. Its only route for \"wanted evidence we couldn't reach\" is the unverified-check record: \"not as a finding and not as nothing.\" That record also covers the risk the protocol warns about, that \"a wrong deletion is invisible.\" The lead stays visible without being presented as debt.\n\n## What to record in the `debt` object\n\n- **`checked`:** include `data-ownership`. It ran, and it did not come back clean.\n- **Unverified check entry:**\n  - **Subject:** possible `two-writers` (or `shared-persistence`) on orders, with components [service-A, service-B, orders-store].\n  - **Established:** service A's write path, cited by file.\n  - **Not established:**\n    - whether service B writes to orders (source unreadable);\n    - whether the accepted ADR decides write authority (ADR unavailable);\n    - B's change history.\n  - **Gate and lens results:**\n    - Real: inconclusive.\n    - Uncovered: could not decide, so treated as refuted under the protocol.\n    - Unstated: not run.\n    - Live: partial (only A's history is available).\n  - **Tools that actually ran:** list them.\n  - **To resolve:** read B's write path to orders and read the accepted ADR. A later run can then raise this as `dbt-two-writers--<sorted component ids>` if it holds up.\n- **No finding entry,** so there is no `baselineState`, severity or remedy for this item.\n\n## What to tell the owner today\n\nAn accurate report today says three things:\n\n1. Service A is the one confirmed writer to orders.\n2. A possible second writer, and whether an accepted ADR covers it, could not be checked because of the inaccessible source and ADR.\n3. This is a lead for a later session to look into. It is not established debt.\n\nAlso state the report's standing caveats: the audit is a survey and not a plan of record, and the set of findings is not stable from one run to the next.",
+      "meets_unknown_verdict_criterion": false
+    },
+    {
+      "arm": "baseline",
+      "run": 4,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2777,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 12923,
+          "webSearchRequests": 0,
+          "costUSD": 0.159039,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 1498,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.159039,
+      "response": "# Verdict: delete the finding and record two unverified checks\n\n**Verdict:** the finding does not survive. Real is unconfirmed (not refuted), and Uncovered is refuted under the \"cannot decide → refuted\" rule. Deleting it is a mechanical consequence of the protocol, not a judgement that the services don't share writes.\n\n**Disposition:** **delete** the `two-writers` finding. \"Defer\" is not an outcome the protocol offers. The open question still has to appear in the report, as unverified checks in the `debt` object rather than as a finding or a `note`.\n\n## Walking the stages\n\n**Stage 2, Real gate: unconfirmed.**\n- The gate means opening what the evidence cites and confirming it says what the finding claims.\n- One write path opens and supports \"service A writes orders.\"\n- The claim, though, is that *two* services write orders with no named ordering authority. The second half cites source that cannot be opened.\n- So Real is neither confirmed nor refuted. The tools rule lets a partly verified finding go forward with lower confidence and a named missing check, so it moves on to stage 3.\n\n**Stage 2, Live gate:** this runs on every candidate. Record the change counts for the cited components if history is available. It doesn't change the outcome here.\n\n**Stage 3, Uncovered lens: refuted.**\n- The verifier cannot tell whether an ADR settled this.\n- The brief says to report refuted when it cannot decide. That rule exists so an undecidable claim doesn't ship by default.\n- In this case it isn't just a technicality. An accepted ADR exists for exactly the service whose write path we can't see, which is a concrete reason the decision may already be recorded.\n- Kill rule: Uncovered refuted → **delete**.\n\n**Stages 4 and 5 do not run.** There is no severity and no remedy. No `blocking` or `high` should leak into the report, and none could anyway, because no invariant id was established.\n\n## Established vs. not established\n\n| Established | Not established |\n|---|---|\n| Service A writes the orders entity (cite the visible path) | That the second service writes orders at all |\n| The second service's source is unreadable in this run | Whether any ordering authority or merge rule is named |\n| An accepted ADR exists for the second service but its content is unavailable | Whether that ADR covers write authority over orders, which is the Uncovered question |\n| | Consequence, exposure and severity, none of which are derivable |\n\n## What to record in `debt`\n\n- **`checked`**: include `data-ownership`. Combined with the unverified checks below, this shows the category ran but couldn't decide this question, rather than ran and found it clean.\n- **Unverified checks** (not findings, not notes):\n  1. *Second writer to orders*: needs the second service's source, which was unreadable. It blocked the Real gate on the two-writers claim.\n  2. *ADR coverage of orders write authority*: needs the second service's accepted ADR, which was inaccessible. It blocked the Uncovered lens.\n- **Tools**: list what actually ran (repository search on service A), and note that no access path existed for the second service's source or ADR.\n- **Merge**: if a prior run recorded `dbt-two-writers--<A>-<B>`, it becomes `absent`. Keep it one more run in the collapsed section, with any `status` or `justification` carried forward. Absent here plainly means \"couldn't verify,\" not \"fixed.\"\n\n## For the owner's report today\n\nSay plainly: *\"A possible shared write authority over orders was examined and could not be established. One write path is confirmed. The second service's code and its ADR were inaccessible. This is an open check, not a clean result.\"*\n\nThe cheapest way to resolve it is to grant read access to the second service and its ADR and rerun the data-ownership pass. If the ADR assigns write authority, the question closes. If it doesn't, the finding comes back with evidence behind it.",
+      "meets_unknown_verdict_criterion": false
+    },
+    {
+      "arm": "treatment",
+      "run": 0,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2167,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 13355,
+          "webSearchRequests": 0,
+          "costUSD": 0.150295,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 681,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.150295,
+      "response": "# Debt audit: shared write authority over `orders`\n\n## Verdict: **Unverified**\n\nNo gate or lens settled this candidate either way. Two checks the protocol treats as decisive came back unknown:\n\n| Check | Result | Basis |\n|---|---|---|\n| **Real** (`gates.real`) | `\"unknown\"` | One write path is visible. A shared write needs a second, and that service's source is inaccessible. The claim depends on exactly the part that cannot be read. |\n| **Uncovered** (lens `refuted`) | `null` | An accepted ADR exists but can't be read. The verifier can't tell whether it decided write authority over `orders`. |\n| **Unstated** | not reached | This lens needs the decision record that is unavailable. |\n| **Live** (`gates.live`) | run it if change history is available | It doesn't change the outcome, because both Real and Uncovered are already unknown. |\n\n**Survived refutation attempts: 0.** Only an explicit `refuted: false` counts, and `null` is not one.\n\n## Decision: **Defer**\n\nKeeping it as a finding would be wrong, and so would deleting it:\n\n- **Not kept.** An unknown Real or Uncovered check defers a new candidate. Shipping it as a finding would publish a claim whose second half nobody has seen.\n- **Not deleted.** Deletion needs an explicit refutation of Real or Uncovered. \"Cannot determine\" is not a refutation, and deleting it would hide a lead that may be real.\n- **No severity.** Stage 4 has nothing verified to work from. Consequence is not established, because no second writer is shown, so no invariant violation is shown either. Exposure also stays unestablished in practice. A provisional severity may have set how many lenses ran, but it must not appear in the report.\n- **No remedy.** Stage 5 runs only on survivors.\n\nIf this was a **prior** finding rather than a new candidate, the handling changes:\n- Retain it with its `status`, `justification`, `acceptedUntil`, `firstSeen` and `aliases`.\n- Set `baselineState: updated` and mark verification unknown.\n- Keep its exposure only as historical.\n- State that the old severity was not re-established.\n- Do not mark it `absent`, because missing coverage is not disappearance.\n\n## What is established and what is not\n\n**Established:**\n- One service writes `orders`, at the cited path.\n- An accepted ADR exists for the second service's area.\n\n**Not established:**\n- That the second service writes `orders` at all.\n- That the two writes lack an ordering authority (the `two-writers` signature), or that both treat the table as authoritative (`shared-persistence`).\n- Whether the \"Not when\" clause applies, for example disjoint fields with a stated merge, or a read-only consumer.\n- Whether the accepted ADR already decides this. If it does, the candidate is deleted as covered.\n- Consequence, and therefore severity.\n\n## What to record in `design.json` → `debt`\n\n```jsonc\n\"checked\": [ \"data-ownership\", /* …every category actually run */ ],\n\"unverified\": [\n  { \"check\": \"<candidate-id>: real\",\n    \"reason\": \"Second service source inaccessible; only one write path to orders is visible, so a second writer is unconfirmed. Next probe: obtain the second service's persistence layer (ORM mappings, migrations, SQL) and confirm whether it writes orders, which fields, and under what ordering.\" },\n  { \"check\": \"<candidate-id>: uncovered\",\n    \"reason\": \"Accepted ADR is referenced but unreadable; cannot tell whether it settled write authority or ordering for orders. Next probe: retrieve the ADR and check whether it names an owner, an ordering authority, or a field split for orders writes.\" }\n]\n```\n\n- **Candidate id:** use `dbt-two-writers--<sorted component ids>`, which keeps it stable for a later run. Record the identity ingredients too.\n- **Tools:** list which tools actually ran.\n- **Survived attempts:** record 0.\n\n## For today's report\n\nThe accurate statement to the owner:\n\n> \"One write path to `orders` is confirmed. A second writer is suspected but unverified, because that service's source and its accepted ADR were unavailable. This is not a finding and not a clearance. It needs those two sources.\"\n\nAlso include the protocol's standard caveats:\n- This is a survey, not a plan.\n- The finding set is not stable across runs.\n- `data-ownership` is examined only within recorded coverage, not proven clean.",
+      "meets_unknown_verdict_criterion": true
+    },
+    {
+      "arm": "treatment",
+      "run": 1,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2026,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 13349,
+          "webSearchRequests": 0,
+          "costUSD": 0.147427,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 494,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.147427,
+      "response": "# Verdict: **Defer.** Neither keep nor delete.\n\n## Gate and lens outcomes\n\n| Check | Result | Basis |\n|---|---|---|\n| **Real** (stage 2) | `gates.real: \"unknown\"` | Only one write path is visible. The claim is that *two* services share write authority. A single writer is not the pattern, and the second writer's source is inaccessible, so the claim is neither confirmed nor contradicted. |\n| **Uncovered** (stage 3) | `refuted: null` | The verifier could not determine whether the inaccessible accepted ADR settled this trade-off. This is not `false`, so it does not count as a survived refutation attempt. |\n| **Unstated** (stage 3) | `refuted: null` | It cannot be judged without the ADR, because the ADR is exactly where an accepted trade-off would be stated. |\n| **Live** (stage 2) | Not stated in the case | Run it if change counts exist for the visible service. It does not change the outcome: two unknowns on Real and Uncovered already defer the candidate. |\n\n**Survived refutation attempts: 0.** Unknown verdicts never count.\n\n## Why defer, not delete or keep\n\n- **Not delete.** Deletion requires Real or Uncovered to be *refuted*, meaning evidence contradicts the claim. Here nothing contradicts it; the evidence is simply missing. Treating \"can't see it\" as \"false\" would be an invisible wrong deletion.\n- **Not keep.** The protocol states that unknown Real or Uncovered checks defer a new candidate rather than confirm it. Shipping it would publish a two-writer claim backed by one writer, possibly against an ADR that already settled the issue.\n- **No severity.** Stage 4 re-derives severity only for survivors. Severity is not chosen or shipped for a deferred candidate. A finder's provisional `breaking`/`on-path` claim would have earned both lenses as separate agents, but it is not a verdict.\n- **No remedy.** Stage 5 runs only on confirmed problems, so the report must not propose \"name one ordering authority.\"\n\n## What is established vs. not\n\n**Established:**\n- Service A writes the orders entity, citing the visible file and path.\n- The audit ran the `data-ownership` category and examined this candidate.\n\n**Not established:**\n- That a second service writes orders.\n- Whether an ordering authority is named, which is the `two-writers` signature.\n- Whether the accepted ADR covers this, which would make it a decision rather than debt.\n- Whether any trade-off is stated.\n- Consequence and exposure, and therefore severity.\n\n## What to record in `debt`\n\n```jsonc\n\"checked\": [\"data-ownership\", /* …every category actually run */],\n\"unverified\": [\n  { \"check\": \"dbt-two-writers--<sorted component ids>: real\",\n    \"reason\": \"Second writer's source not readable; only one write path (<cited path>) confirmed. Next probe: obtain <service-B> source and locate writes to the orders table/entity.\" },\n  { \"check\": \"dbt-two-writers--<sorted component ids>: uncovered\",\n    \"reason\": \"Accepted ADR <id/ref> unavailable; cannot tell whether it settled write authority or ordering for orders. Next probe: retrieve the ADR text and check whether it names an ordering authority or declares the trade-off.\" }\n]\n```\n\nAlso record:\n- Which tools actually ran, such as repository search only.\n- That Unstated could not be evaluated, for the same missing-ADR reason.\n- `identity: { scheme: \"pattern+components/v1\", pattern: \"two-writers\", components: [...] }`, so a later run with access matches it. I chose `two-writers` over `shared-persistence` because the claim is about write authority and ordering, not about which components treat the table as authoritative.\n\n**If this were a prior finding rather than a new candidate:**\n- Retain it with its `status`, `justification`, `acceptedUntil`, `firstSeen`, and `aliases`.\n- Set `baselineState: \"updated\"` and mark its verification unknown, linked to the unverified checks above.\n- State that its old severity was not re-established this run.\n- Do not mark it `absent`, because missing access is not disappearance.\n\n## For today's report\n\nReport it plainly in the unverified section:\n\n> A two-writer claim on orders was raised but not verified. One writer is confirmed. The second writer's source and the governing ADR were inaccessible, so the claim is deferred. It is neither confirmed debt nor dismissed. Resolving it needs the second service's source and the ADR text.\n\nThis is accurate today and does not overstate in either direction.",
+      "meets_unknown_verdict_criterion": true
+    },
+    {
+      "arm": "treatment",
+      "run": 2,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 1832,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 13351,
+          "webSearchRequests": 0,
+          "costUSD": 0.143563,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 471,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.143563,
+      "response": "# Verdict: **Defer**. Do not keep it, and do not delete it.\n\n## Why\n\nThe candidate's claim is that **two** services hold write authority over `orders`. Two checks matter here.\n\n| Check | Status | Reason |\n|---|---|---|\n| **Real** (Stage 2 gate) | `\"unknown\"` | One write path is confirmed. The second writer's source can't be read, so the claim's main point, a *second* writer, is unproven. That makes this unknown, not refuted. |\n| **Uncovered** (Stage 3 lens) | `refuted: null` | An accepted ADR is known to exist but can't be read. If it names an ordering authority or records the trade-off, the kill rule deletes the finding. The verifier could not tell either way. |\n\nThe protocol is explicit: *\"Unknown Real or Uncovered checks defer a new candidate; they do not confirm it or delete it as false.\"* Either unknown alone is enough to defer, and here both are unknown.\n\nConsequences:\n- **No severity ships.** Stage 4 cannot re-derive severity from unverified inputs. Any `claimedConsequence`/`claimedExposure` was only provisional and must not appear as a verdict.\n- **No remedy.** Stage 5 runs only on confirmed problems.\n- **Zero survived refutation attempts.** `null` does not count toward survival.\n- **No disconfirming line.** No lens raised an objection that the finding then survived.\n\n## Established vs. not established\n\n**Established**\n- One component writes `orders`, at the cited path. That is the only verified fact.\n- An accepted ADR related to this exists. Its contents are unknown.\n\n**Not established**\n- That the second service writes `orders`, or only reads it. A declared read-only consumer would fall under `shared-persistence`'s *Not when* clause.\n- Whether an ordering authority is named, or whether the writes touch disjoint fields with a stated merge (`two-writers` *Not when*).\n- Whether the ADR settles the question, which would make it a decision rather than debt.\n- Consequence, exposure, and therefore severity.\n\n## What to record in `design.json`\n\n```jsonc\n\"debt\": {\n  \"checked\": [\"data-ownership\", /* …every other category that ran */],\n  \"unverified\": [\n    { \"check\": \"dbt-two-writers--<orders-store>-<svc-a>-<svc-b> / gates.real\",\n      \"reason\": \"Second service source inaccessible; only one write path to orders confirmed. Next probe: obtain <svc-b> source and search for writes/ORM mappings on the orders entity.\" },\n    { \"check\": \"dbt-two-writers--<orders-store>-<svc-a>-<svc-b> / lens.uncovered\",\n      \"reason\": \"Accepted ADR <id/ref> exists but is unreadable; cannot tell whether it names an ordering authority or accepts the trade-off. Next probe: retrieve the ADR text and check what it decided about orders writes.\" }\n  ],\n  \"verification\": { \"toolsAvailable\": [/* only what actually ran */] }\n}\n```\n\n- Use the protocol's id scheme (`dbt-` + pattern + sorted component ids). Then a later run that obtains the evidence joins to this same record.\n- If change counts were readable, record the Live result too. It can't produce a severity while Real is unknown.\n- If this was a **prior** finding rather than a new one: keep it with its `status`/`justification`/`acceptedUntil`, mark it `baselineState: updated`, mark verification unknown, link the unverified checks, and say the old severity was not re-established. Do not mark it `absent`.\n\n## What to put in the report\n\nFor an accurate report today, state it plainly: *\"A possible two-writer condition on `orders` was raised and could not be verified. One write path is confirmed. The second writer and the governing ADR were inaccessible. This is an open lead, not a finding and not a clean result.\"* Also include the protocol's standing caveats: the audit is a survey, not a plan; the finding set is not stable across runs; and `data-ownership` being in `checked` means it was examined within recorded coverage, not proven clean.",
+      "meets_unknown_verdict_criterion": true
+    },
+    {
+      "arm": "treatment",
+      "run": 3,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 1789,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 13351,
+          "webSearchRequests": 0,
+          "costUSD": 0.142703,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 466,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.142703,
+      "response": "# Verdict: **Defer.** Do not keep it, and do not delete it.\n\nThe candidate is a `two-writers` claim (shared write authority over `orders`). Two of its four tests cannot be decided with the evidence available today. Under the protocol, an unknown **Real** or **Uncovered** check defers a new candidate. It neither confirms the finding nor deletes it as false.\n\n## What is established\n\n| Item | Status | Basis |\n|---|---|---|\n| Service A writes `orders` | **Established** | The write path is visible and readable |\n| An accepted ADR exists that may bear on this | **Established (existence only)** | It is referenced but cannot be read |\n\n## What is not established\n\n| Test | Verdict | Why |\n|---|---|---|\n| **Real** | `gates.real: \"unknown\"` | The claim needs *two* writers. Only one write path can be read, and the second service's source is inaccessible, so the gate cannot confirm or refute the second writer. |\n| **Uncovered** | lens `refuted: null` | An accepted ADR exists but cannot be read. The verifier explicitly cannot decide. An accepted ADR is the exact kind of record that would refute this lens and delete the finding, so the risk here is concrete. |\n| **Unstated** | not run / `null` | It depends on reading the same ADR. Even if it had run, it could only lower confidence. |\n| **Live** | unknown or irrelevant | Without Real, no severity lookup should run. If change counts are available for the visible component, record them as facts only. |\n\n**Severity: none.** Deferred candidates do not enter the lookup. Stage 4 has no verified consequence or exposure to work from, and no `blocking`/`high` claim can ship. Survived refutation attempts: **0**, because `null` never counts as survived.\n\n## What to record in `design.json` → `debt`\n\n- **Findings:** nothing for this candidate.\n- **`checked`:** include `data-ownership`. Coverage is incomplete for this entity, and the unverified entries say so.\n- **`unverified`:** two entries, one per undecided check.\n\n```jsonc\n\"unverified\": [\n  { \"check\": \"dbt-two-writers--<sorted component ids> / gates.real\",\n    \"reason\": \"Only one write path to orders is readable; the second service's source is inaccessible, so the second writer is unconfirmed. Next probe: obtain read access to the second service's source and look for writes (ORM mappings, INSERT/UPDATE against orders, migrations it owns).\" },\n  { \"check\": \"dbt-two-writers--<sorted component ids> / lens.uncovered\",\n    \"reason\": \"An accepted ADR exists but is inaccessible; cannot determine whether it settles write authority or ordering for orders. Next probe: retrieve the ADR and check whether it names an ordering authority, disjoint-field writes, or single-home routing.\" }\n]\n```\n\n- **Tools:** record which tools actually ran, and that source access and ADR access were unavailable.\n- **If this candidate matches a prior finding** by id or alias, the handling changes. Keep the prior record with its `status`, `justification`, `acceptedUntil`, `firstSeen`, and `aliases`. Set `baselineState: \"updated\"`, mark verification unknown, and link the unverified checks above. Treat its exposure as historical and say the old severity was not re-established. Never mark it `absent`.\n\n## What the report should say today\n\n\"Data-ownership was examined. One candidate (shared write authority over `orders`) could not be verified. A second writer is unconfirmed because its source was inaccessible, and an accepted ADR that may already settle the question could not be read. It is listed as unverified rather than as a finding. Resolving it needs access to the second service's source and to the ADR.\"\n\nThis keeps today's report accurate. It neither publishes a claim that might be both unreal and already decided, nor silently drops a lead that might be real. As the protocol requires, the report should also say it is a survey and not a plan, and that the finding set is not stable across runs.",
+      "meets_unknown_verdict_criterion": true
+    },
+    {
+      "arm": "treatment",
+      "run": 4,
+      "exit": 0,
+      "subtype": "success",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "model_usage": {
+        "claude-opus-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 2029,
+          "cacheReadInputTokens": 535,
+          "cacheCreationInputTokens": 13349,
+          "webSearchRequests": 0,
+          "costUSD": 0.147487,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 646,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "estimated_cost_usd": 0.147487,
+      "response": "# Verdict: **Defer.** Do not keep it, and do not delete it.\n\nThe candidate is neither confirmed nor refuted. Two checks the protocol needs came back unknown. Under the kill rules, an unknown **Real** or **Uncovered** check defers a new candidate. It does not ship as a finding and it does not get deleted as false.\n\n## Established vs. not established\n\n| Check | Status | Basis |\n|---|---|---|\n| **Real**: service A writes orders | Established | A write path is visible in the repository |\n| **Real**: service B writes orders | **Unknown** | B's source is inaccessible, so the \"two writers\" claim rests on one observed writer |\n| **Uncovered** | **Unknown** (`refuted: null`) | An accepted ADR exists but cannot be read. It may settle this trade-off, and the verifier says so honestly |\n| **Unstated** | Not reached | Nothing to weigh without the ADR text |\n| **Live** | Not stated in the case | If the change history is also missing, record it as unknown too. Do not guess an exposure value |\n| **Severity** | **Not derived** | The lookup needs verified consequence and exposure. Any provisional severity only decided how many lenses to run. It does not ship |\n| **Remedy (stage 5)** | Not run | Remedies are written only for survivors |\n| **Survived refutation attempts** | **0** | Only an explicit `refuted: false` counts. `null` does not |\n\nThe accepted ADR cuts both ways. It is a real reason this might be a recorded decision rather than debt. It is not evidence that it is one. Treating it as either would be inventing a verdict.\n\n## What to record in `design.json`\n\n```jsonc\n\"debt\": {\n  \"checked\": [\"data-ownership\", /* …other categories that ran */],\n  \"findings\": [],   // this candidate is NOT among them\n  \"unverified\": [\n    { \"check\": \"dbt-two-writers--<svcA>-<svcB> / gates.real\",\n      \"reason\": \"Only one write path to orders observed (<svcA path>). <svcB> source inaccessible. Next probe: obtain <svcB> source; search its ORM mappings / SQL for INSERT/UPDATE on orders and any named ordering authority.\" },\n    { \"check\": \"dbt-two-writers--<svcA>-<svcB> / lens.uncovered\",\n      \"reason\": \"Accepted ADR <id/ref> is unreadable; cannot tell whether it decides write authority over orders. Next probe: retrieve the ADR text from its owner or store and check whether it names an ordering authority or accepts shared writes.\" }\n    // add a gates.live entry if change counts for these components are also unavailable\n  ],\n  \"tools\": [\"<only those that actually ran>\"]\n}\n```\n\nNotes on the record:\n\n- **Pattern and id:** use `two-writers`, since the claim is shared write authority. Set `id = \"dbt-two-writers--\" + sorted component ids`, and record the `identity` ingredients so a later run with access can pick it up.\n- **If this were a prior finding** rather than a new candidate: keep it with its `status`, `justification`, `acceptedUntil`, `firstSeen` and `aliases`. Set `baselineState: \"updated\"`, mark verification unknown, link these unverified checks, keep exposure as historical, and state that the old severity was not re-established. Never mark it `absent`.\n\n## What the report should say today\n\nThe report can ship today and still be accurate. This item goes in it as an **unverified lead**, not a finding. Suggested wording:\n\n> A possible second writer to `orders` was identified but could not be verified: only one write path is visible, the second service's source was unavailable, and an accepted ADR that may already decide this could not be read. No severity is assigned. Access to `<svcB>` and ADR `<ref>` would resolve it.\n\nAlso include the protocol's standing caveats: this audit is a survey and not a plan of record, and a category with no findings means \"examined within recorded coverage,\" not \"proven clean.\"\n\nDo not upgrade the lead to a finding to make the report feel more complete under the deadline. That is exactly the kind of claimed completeness the protocol says costs more than the finding is worth.",
+      "meets_unknown_verdict_criterion": true
+    }
+  ]
+}

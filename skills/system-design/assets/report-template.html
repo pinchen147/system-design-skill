@@ -346,7 +346,8 @@ document.getElementById("rdate").textContent = D.updatedAt || "";
 const tabDefs = [{id:"overview",label:"Overview"}]
   .concat(archs.map(a=>({id:a.id,label:a.id==="current"?"Current":a.id.toUpperCase()+" — "+shortName(a.name)})))
   .concat([{id:"compare",label:"Compare"}])
-  .concat((D.debt?.findings||[]).length ? [{id:"debt",label:"Debt"}] : []);
+  .concat((D.debt?.findings||[]).length || (D.mode==="repo" &&
+    ((D.debt?.checked||[]).length || (D.debt?.unverified||[]).length)) ? [{id:"debt",label:"Debt"}] : []);
 const tabsNav = document.getElementById("tabs");
 tabsNav.innerHTML = tabDefs.map(t=>`<button role="tab" id="tab-${esc(t.id)}" aria-selected="false" data-tab="${esc(t.id)}">${esc(t.label)}</button>`).join("");
 tabsNav.addEventListener("click", e => { const b=e.target.closest("button"); if(b) location.hash="#"+b.dataset.tab; });
@@ -358,6 +359,35 @@ function recoBanner(){
   if(!reco.architecture) return "";
   return `<div class="reco"><span class="k">Recommendation</span><h3>${esc(archName(reco.architecture))}</h3>
   <ol>${(reco.reasoning||[]).map(r=>`<li>${esc(r)}</li>`).join("")}</ol></div>`;
+}
+function renderInvestigation(){
+  const I=D.investigation;
+  if(!I) return `<div class="card"><h2>Investigation</h2><p>Investigation coverage not recorded. This design predates the evidence register or has not recorded one.</p></div>`;
+  const records=key=>Array.isArray(I[key])?I[key]:[];
+  const evidence=records("evidence"), unknowns=records("unknowns"), questions=records("questions"), checks=records("checks");
+  const evidenceIds=new Set(evidence.map(item=>item.id));
+  const refs=item=>(item.evidenceRefs||[]).map(id=>evidenceIds.has(id)?esc(id):`Missing evidence: ${esc(id)}`).join(" · ")||"No evidence referenced";
+  const status=(value,labels)=>Object.prototype.hasOwnProperty.call(labels,value)?labels[value]:"Not established";
+  const list=items=>`<ul class="plain">${items.map(item=>`<li>${esc(item)}</li>`).join("")}</ul>`;
+  return `<div class="card"><h2>Investigation</h2>
+    <p><b>Session:</b> ${esc(I.session?.id||"Not recorded")} · <b>Revision: ${esc(I.session?.revision??"Not recorded")}</b></p>
+    ${checks.length?`<h3>Checks</h3><p class="hint">Outcomes are recorded separately. Unknown or missing outcomes do not establish coverage; evidence freshness is shown below.</p>
+      <div class="scroll-x"><table><thead><tr><th>Check</th><th>ID</th><th>Outcome</th><th>Evidence</th><th>Detail</th></tr></thead><tbody>
+      ${checks.map(item=>`<tr><td>${esc(item.check||item.id)}</td><td class="mono">${esc(item.id)}</td><td>${status(item.status,{pass:"Passed",fail:"Failed",unknown:"Unknown"})}</td><td>${refs(item)}</td><td>${esc(item.detail||"")}</td></tr>`).join("")}
+      </tbody></table></div>`:`<p>No checks recorded; coverage not established.</p>`}
+    ${unknowns.length?`<h3>Unknowns</h3><ul class="plain">${unknowns.map(item=>`<li><b>${esc(item.id)} — ${esc(item.question)}</b> · ${status(item.status,{open:"Open",resolved:"Resolved"})}
+      ${item.resolution?`<p>${esc(item.resolution)}</p>`:""}<p class="hint">${refs(item)}</p></li>`).join("")}</ul>`:""}
+    ${questions.length?`<h3>Questions</h3><ul class="plain">${questions.map(item=>`<li><b>${esc(item.id)} — ${esc(item.question)}</b> · ${status(item.status,{open:"Open",partial:"Partly answered",answered:"Answered"})}
+      ${item.answer?`<p>${esc(item.answer)}</p>`:""}<p class="hint">${refs(item)}</p></li>`).join("")}</ul>`:""}
+    ${evidence.length?`<details><summary>Evidence (${evidence.length})</summary>
+      ${evidence.map(item=>`<article class="dm-entity"><h3>${esc(item.id)} — ${esc(item.claim)}</h3>
+        <p><b>Type:</b> ${esc(item.type||"Not recorded")} · <b>Freshness:</b> ${status(item.freshness,{current:"Current",stale:"Stale",unknown:"Unknown"})}</p>
+        ${item.scope?`<p><b>Scope:</b> ${esc(item.scope)}</p>`:""}
+        ${(item.limitations||[]).length?`<h4>Limits</h4>${list(item.limitations)}`:""}
+        ${(item.sources||[]).length?`<h4>Local sources</h4><ul class="plain">${item.sources.map(source=>`<li><span class="mono">${esc(source.path)}</span> — ${esc(source.sha256||"No digest recorded")}</li>`).join("")}</ul>`:""}
+        ${(item.references||[]).length?`<h4>References</h4>${list(item.references)}`:""}
+      </article>`).join("")}</details>`:`<p>No evidence recorded.</p>`}
+  </div>`;
 }
 function renderOverview(sec){
   const R=D.requirements||{}, E=D.estimates||{};
@@ -420,6 +450,7 @@ function renderOverview(sec){
         ${(item.evidence||[]).length?`<p class="mono" style="margin:.2rem 0 0;color:var(--muted)">Evidence: ${esc(item.evidence.join(" · "))}</p>`:""}
       </article>`).join("")}
     </div>`:""}
+    ${renderInvestigation()}
     ${(D.risks||[]).length?`<div class="card"><h2>Risks — what breaks first</h2><ul class="plain">${D.risks.map(r=>`<li>${esc(r.text)}${r.horizon?` <span class="mono" style="color:var(--faint)">(${esc(r.horizon)})</span>`:""}</li>`).join("")}</ul></div>`:""}
     ${(D.nextSteps||[]).length?`<div class="card"><h2>Next steps</h2><ul class="plain">${D.nextSteps.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div>`:""}
   </div>`;
@@ -1513,7 +1544,7 @@ function findingBody(f){
       </section>
       <section class="detail-group"><h4>Verification</h4>
         ${gates.length?`<p class="fev"><b>Gates:</b> ${gates.map(([g,r])=>`${esc(g)} ${esc(r)}`).join(" · ")}</p>`:""}
-        ${lenses.map(l=>`<p class="fev"><b>${esc(l.lens)}:</b> ${l.refuted?"refuted":"survived"}${l.objection?` — ${esc(l.objection)}`:""}</p>`).join("")}
+        ${lenses.map(l=>`<p class="fev"><b>${esc(l.lens)}:</b> ${l.refuted===true?"refuted":l.refuted===false?"survived":"not established"}${l.objection?` — ${esc(l.objection)}`:""}</p>`).join("")}
         <p class="fev"><b>Confidence:</b> ${esc(f.confidence||"—")}${(v.tools||[]).length?` · checked with ${esc(v.tools.join(", "))}`:""}</p>
       </section>
     </div>

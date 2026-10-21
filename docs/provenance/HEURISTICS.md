@@ -110,3 +110,13 @@ determine transaction locality — ownership, atomic invariants, and datastore c
 |---|---|
 | Aim for three structurally distinct candidates, but draw only those that remain viable after the envelope and invariants | Product decision confirmed by user preference after the 2026-07-31 blind control test; the viability gate retains the test's proportionality correction. |
 | A rating is never evidence; the recommendation chain rests on a number, an invariant, or a named failure mode | Internal: a candidate that scores itself and then cites the score is arguing in a circle. Observed across four red-team designs, three of which selected the same middle candidate carrying identical self-assigned scores. |
+
+## Evidence and uncertainty
+
+| Claim | Source |
+|---|---|
+| Scoped observed/derived/inferred records, retained sources, unknown coverage, and evidence identity distinct from sufficient proof | [REA tool contracts](https://github.com/morluto/rea/blob/705058f3e2df82503f1c601fc464aea7cbb626b8/docs/tool-design.md) and [coverage](https://github.com/morluto/rea/blob/705058f3e2df82503f1c601fc464aea7cbb626b8/docs/reconstruction-coverage.md); adapted contract, not a claim of architecture-judgment accuracy. |
+| Changed source bytes invalidate dependent conclusions; old passing results do not establish current coverage | Local evidence-lifecycle design derived from content identity and the scoped-coverage contract above. Dirty working trees require byte identity rather than HEAD alone. |
+| Generation, selection, and delivery require distinct outcome evidence | [Harness research synthesis](../research/2026-10-21-harness-lessons.md); local observed selector disagreements motivate the separation, not a universal measured improvement. |
+| Structural parsing is separate from semantic verification | [MUSE v1](https://arxiv.org/html/2606.03005v1), task representation/parsing/outcome policy; deterministic task verifiers do not establish open-ended architecture correctness. |
+| Recovery is operation-specific and preserves unknowns | [REA local reference](https://github.com/morluto/rea/blob/a2d8b94dd50dab8d966239dd63ab84718aa8b4b4/.agents/skills/reverse-engineer-anything/references/connection-and-recovery.md); implemented command contracts and tests in this repository. |

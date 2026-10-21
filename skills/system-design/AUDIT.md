@@ -37,9 +37,9 @@ Two exclusions, both tempting. Unexercised flexibility built for a future that n
 
 ## The pipeline
 
-A model is an unreliable detector of architectural problems and a reliable disprover of them. The pipeline is built on that asymmetry: candidates are generated cheaply, and then have to survive attempts to destroy them before anyone sees them.
+Models can both invent findings and incorrectly dismiss real ones. Generate candidates, then attempt to refute them against scoped evidence. Separation is a review discipline, not a guarantee of correctness; retain uncertainty and calibrate the judgments against independently checked cases.
 
-Stages pass conclusions, never arguments. A stage that reads the previous stage's reasoning adopts it, and the verification becomes agreement. Each stage restarts from the artifact before it.
+Stages pass conclusions, never arguments. A stage that reads the previous stage's reasoning can adopt its assumptions. Each stage restarts from the artifact before it.
 
 | # | Stage | Runs on | Produces |
 |---|---|---|---|
@@ -64,6 +64,8 @@ Only stages 1 to 3 carry the argument; the rest is reading, a lookup, and bookke
 | **Uncovered** refuted | Delete | A recorded decision makes this a decision, not debt |
 | **Unstated** refuted | Drop `confidence` one level, and the objection becomes the finding's disconfirming line | Whether a trade-off is adequately stated is a judgement, and a wrong deletion is invisible |
 | **Live** refuted | Set `exposure` to `off-path` | Change history is a proxy, so this lowers the finding rather than removing it — and an untouched component on the primary flow can still break |
+
+**Unknown is a separate outcome.** When a check cannot decide, set `gates.real` or `gates.live` to `"unknown"` for a gate, or a lens’s `refuted` to `null`. In `debt.unverified`, put the candidate id and check name in `check`, and the missing evidence plus next probe in `reason`, so the report exposes both. Unknown Real or Uncovered checks defer a new candidate; they do not confirm it or delete it as false. If Live cannot establish either exposure value, defer a new candidate rather than inventing an axis for the severity lookup. For a prior finding, retain its exposure as historical, mark verification unknown, and explain that the old severity was not re-established. Only explicit `refuted: false` counts toward survived refutation attempts. A missing legacy verdict means not established.
 
 Deletion is silent, survival is visible: reserve it for the two verdicts that make a finding factually wrong, and let the reader adjudicate the rest.
 
@@ -97,7 +99,7 @@ The framing each stage runs under is load-bearing: a verification prompt that op
 
 **Stage 2 — Gates.** Cheap, mechanical, and run on every candidate without exception. *Real*: open what the evidence cites and confirm it says what the finding claims. *Live*: look up the change counts for the cited components. These two catch the errors that cost the least to find and the most to publish.
 
-**Stage 3 — Red team.** One agent per lens, each seeing the facts and the claim but not the finder's argument. Each is asked to **destroy** the finding, and to report it refuted when it cannot decide. A verifier asked whether a finding is correct will agree; a verifier asked to break it will try. `blocking` and `high` candidates get *Uncovered* and *Unstated* as separate agents. `medium` and `low` get one combined pass.
+**Stage 3 — Red team.** One agent per lens, each seeing the facts and the claim but not the finder's argument. Each is asked to **test a refutation** of the finding against the facts. Return `refuted: true` only with evidence contradicting the claim, `false` when the stated check supports survival, and `null` when the available evidence cannot decide. Give the missing source and next probe for an unknown result; do not convert it into a deletion or a survived check. `blocking` and `high` candidates get *Uncovered* and *Unstated* as separate agents. `medium` and `low` get one combined pass.
 
 ```jsonc
 { "lens": "uncovered", "refuted": false,
@@ -271,7 +273,7 @@ The merge, in order:
 1. Read the prior `design.json` and index every finding by its id **and** every alias.
 2. Run stage 1 without showing it that index.
 3. Join this run's findings to the prior ones.
-4. Set `baselineState`: `unchanged` when nothing material moved, `updated` when severity, components, or remedy changed, `new` when unmatched, `absent` for a prior finding with no match now.
+4. Set `baselineState`: `unchanged` when nothing material moved, `updated` when severity, components, or remedy changed, `new` when unmatched, `absent` for a prior finding with no match after the relevant checks completed. If unavailable or stale evidence prevented those checks, retain the prior finding and its human decisions, mark `baselineState: updated`, set affected verification to unknown, and link an unverified check. Do not label missing coverage as disappearance.
 5. Carry forward, never regenerate: `status`, `justification`, `acceptedUntil`, `firstSeen`, `aliases`. These record human decisions, and a re-run must never silently reopen an accepted finding.
 6. Regenerate freely: title, consequence prose, remedy text, evidence, blast radius, disconfirming line.
 7. Keep `absent` findings for one further run, shown in a collapsed section. A finding that disappeared is at least as likely to have been missed as fixed, and one run of visibility lets a human decide which. Drop them after that.
@@ -283,11 +285,11 @@ Write the `debt` object into `design.json` before rendering; the schema is in [H
 
 Three things belong there beyond the findings themselves.
 
-**What was examined.** `checked` lists every category the audit ran. A category that produced nothing then reads as checked and clean, rather than as an omission — without it, silence is ambiguous and the reader has to assume the worst.
+**What was examined.** `checked` lists every category the audit ran. A category that produced nothing reads as examined within recorded coverage, not proven clean or omitted — without it, silence is ambiguous and the reader has to assume the worst.
 
 **What could not be established.** Every check that wanted evidence the run could not reach: history outside the observed window, a component with no readable source, an ADR that points somewhere unavailable, a claim that needed a tool the harness does not have. Record it as an unverified check, not as a finding and not as nothing.
 
-**How each finding was verified.** Which gates ran and their verdicts, each lens with its objection and whether it refuted, which tools were actually available, and how many refutation attempts the finding survived. A finding that beat two adversaries and one that faced none are different claims, and a reader who cannot tell them apart has to treat all of them as the weaker kind.
+**How each finding was verified.** Which gates ran and their verdicts, each lens with its objection and whether it refuted, which tools were actually available, and how many completed refutation attempts the finding survived. Unknown and missing verdicts never count as survived. A finding that beat two adversaries and one that faced none are different claims, and a reader who cannot tell them apart has to treat all of them as the weaker kind.
 
 The disconfirming line is the strongest objection the red team actually raised and the finding survived. It is not a self-authored counterargument: the agent that raised a finding writes a weak case against it, and a weak case against it is worse than none.
 

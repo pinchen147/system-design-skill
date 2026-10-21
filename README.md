@@ -225,6 +225,18 @@ Run `/system-design` again for the same system and it resumes from `design.json`
 - Raise a finding it cannot evidence, or one a recorded decision already settles.
 - Recommend a rewrite. Remedies are incremental, and work that is not gets scheduled and named as such.
 
+## Durable investigation tools
+
+The installed skill includes a Python standard-library CLI; no service, model SDK, or MCP setup is required. Your coding agent still investigates and reasons. The tools preserve evidence, questions, unknowns, and checks inside tracked `design.json`, with tracked JSON checkpoints alongside it.
+
+```bash
+python3 <skill-dir>/scripts/design_session.py status --design docs/design/example/design.json --root .
+```
+
+Use the returned SHA for explicit initialization or subsequent mutations. See [runtime commands and recovery](skills/system-design/RUNTIME.md). Stale writes are rejected; changed source bytes invalidate dependent successful records. A corrupt document can be recovered from an explicitly selected verified checkpoint without silently restoring old approvals. Locking covers cooperating CLI writers; do not edit the same design concurrently with a runtime mutation.
+
+New reports display evidence freshness, unresolved questions, and check results. Older reports remain readable and explicitly show that investigation coverage was not recorded. Structural validation does not certify architectural correctness or substitute for browser inspection. [Research and limits](docs/research/2026-10-21-harness-lessons.md).
+
 ## How it is built
 
 The skill is plain Markdown plus a self-contained report renderer:
@@ -237,6 +249,8 @@ The skill is plain Markdown plus a self-contained report renderer:
 | [`ARCHETYPES.md`](skills/system-design/ARCHETYPES.md) | Canonical system patterns and failure modes |
 | [`HTML-REPORT.md`](skills/system-design/HTML-REPORT.md) | `design.json` schema and output contract |
 | [`EXAMPLES.md`](skills/system-design/EXAMPLES.md) | Conditional BAD/GOOD contrasts for making a generic first draft operationally specific |
+| [`RUNTIME.md`](skills/system-design/RUNTIME.md) | Bundled CLI contracts, tracked evidence, checkpoints, and recovery |
+| [`scripts/design_session.py`](skills/system-design/scripts/design_session.py) | Local investigation commands; uses the existing coding host for reasoning |
 | [`AUDIT.md`](skills/system-design/AUDIT.md) | Debt taxonomy, the verification pipeline, and the findings that must not be raised |
 | [`assets/report-template.html`](skills/system-design/assets/report-template.html) | Interactive renderer with no runtime dependencies |
 | [`scripts/render_report.py`](skills/system-design/scripts/render_report.py) | Injects `design.json` into the template |
@@ -249,7 +263,7 @@ Whether an agent reaches for the skill is decided by its description alone, so a
 python3 scripts/eval-invocation.py --runs 3
 ```
 
-Each run stops at the first Skill call or after three turns. `--host user` repeats the check against your own installed skills and settings.
+Each run stops at the first Skill request or reaches a terminal result within its turn budget. A turn-limit failure, timeout, missing result, or other invalid trial blocks the gate. Unknown costs are reported as unknown. Use `--output-dir <new-directory>` to retain attempts and provenance; `--host user` repeats the check against your installed skills and settings. This evaluates discovery only, not design quality or completed delivery.
 
 ## Support and security
 

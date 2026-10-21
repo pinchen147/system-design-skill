@@ -281,8 +281,8 @@ If no opener works—headless box, remote session—print the absolute path and 
         "resolvedBy": ["b"],             // architecture ids that remove it; [] when no candidate does
         "disconfirming": "ADR-0004 records the shared table, but for reads only — writes were never decided.",
         "verification": {                // what actually ran, so a reader can weigh the claim
-          "gates": { "real": "pass", "live": "pass" },
-          "lenses": [ { "lens": "uncovered", "refuted": false,
+          "gates": { "real": "pass", "live": "pass" }, // pass | refuted | unknown
+          "lenses": [ { "lens": "uncovered", "refuted": false, // true: refuted; false: survived; null: unknown
                         "objection": "ADR-0004 covers reads, not writes" },
                       { "lens": "unstated", "refuted": false, "objection": "no trade-off is recorded" } ],
           "tools": ["repository", "change history"],
@@ -314,6 +314,34 @@ something is wrong.
 `components[].state` is the auditable state-survival contract. `role` says whether the component is the authority whose acknowledgement creates the promise, or a rebuildable `derived` view. An authoritative component supplies `acknowledgement` (the exact durable event after which success may be exposed), `failureDomain` (the independent failure scope covered by that acknowledgement), `rpo` (maximum acceptable data loss or recovery-point age, with scope), `rto` (maximum acceptable recovery time, with scope), and `recovery` (the tested promotion/restore procedure). A derived component supplies `source` (the complete authoritative reconstruction input) and `cursor` (the durable position/checkpoint proving how far that source has been applied); `recovery` may describe rebuild or catch-up. Do not put `UNKNOWN` in authoritative lifecycle state: authoritative operations use `PENDING | RECONCILING | SUCCEEDED | FAILED | CANCELLED`; `UNKNOWN` is only the caller's observation after an ambiguous timeout.
 
 `edges[].contract` is the dependency-completion contract. `deadline` is the caller-visible completion budget for a synchronous edge, or the maximum acceptable age/handoff deadline for an asynchronous or log edge. `retryOwner` names exactly one layer or consumer that retries and, when useful, its policy/key. `backlogBound` names the finite concurrency, in-flight, queue, retention, or lag bound and the saturation action. `n/a` is valid only when it states why that dimension cannot apply and names the alternative finite bound. Missing `state` and `contract` fields remain valid and render as absent sections, not placeholder or `undefined` values.
+
+## Investigation register
+
+`investigation` is additive to version 2. Legacy files remain valid and display “coverage not recorded”; never backfill synthetic evidence. New artifact-producing runs use the bundled [runtime](RUNTIME.md) to maintain it. All record ids are stable; references target evidence ids. Existing deep-dive evidence strings and debt evidence objects remain valid.
+
+```jsonc
+"investigation": {
+  "session": { "id": "session-id", "revision": 1 },
+  "evidence": [{
+    "id": "ev-ack", "claim": "The write acknowledges after journal flush",
+    "type": "observed", // observed | derived | inferred; the host classifies the claim
+    "scope": "src/store.py acknowledgement path",
+    "limitations": ["No process-kill test performed"],
+    "sources": [{"path": "src/store.py", "sha256": "<digest recorded by the runtime>"}],
+    "references": [], "freshness": "current" // current | stale | unknown; byte freshness is not truth
+  }],
+  "unknowns": [{"id": "u-recovery", "question": "Does failover meet the RTO?",
+    "status": "open", "evidenceRefs": [], "resolution": "Run and retain a timed failover"}],
+  "questions": [{"id": "q-durability", "question": "When is a write acknowledged?",
+    "status": "answered", "evidenceRefs": ["ev-ack"], "answer": "After local journal flush"}],
+  "checks": [{"id": "c-failover", "check": "Semantic review: node-loss recovery",
+    "status": "unknown", "evidenceRefs": [], "detail": "No failover evidence available"}]
+}
+```
+
+Unknown statuses are `open | resolved`; question statuses are `open | partial | answered`; check statuses are `pass | fail | unknown`. A completed record requires its supporting evidence references. The host decides sufficiency; the runtime only enforces supported structural and freshness rules. It never runs a referenced command or retrieves an external URL as a side effect of recording evidence. Source paths are relative to the explicit repository root. No hashes are invented for unavailable evidence.
+
+Show questions, open unknowns, check results, evidence freshness and limitations in the overview and in `DESIGN.md`. Keep structural validation separate from semantic and browser checks. Missing records or verdicts do not aggregate to pass. A stale source invalidates dependent completed records until current evidence is established; checkpoints preserve previous bytes for inspection rather than laundering an older pass into the current report.
 
 ## Component types and icons
 
@@ -348,7 +376,7 @@ A client-side architecture uses the same enum: `mobile` or `client` for the shel
 ## What the rendered report does
 
 - **Header** is the title and the date — nothing else, unless the user asks for more.
-- **Tabs**, hash-routed and reload-stable: `#overview` · `#current` (repo mode) · one per candidate (`#a` `#b` `#c` …) · `#compare` · `#debt`, present whenever `debt.findings` is non-empty, which only a repository run produces. ←/→ cycle architectures and do nothing on the tabs that are not architectures. A finding is addressable as `#debt/f-<finding id>`, which selects the tab and opens that row.
+- **Tabs**, hash-routed and reload-stable: `#overview` · `#current` (repo mode) · one per candidate (`#a` `#b` `#c` …) · `#compare` · `#debt`, present for repository findings, examined categories, or unverified checks; an audit with no findings still exposes its coverage limitations. ←/→ cycle architectures and do nothing on the tabs that are not architectures. A finding is addressable as `#debt/f-<finding id>`, which selects the tab and opens that row.
 - **Overview**: problem, FR/NFR tables, the top-three characteristics, estimates with derivations, the data and consistency model, accepted conflicts, and the recommendation banner with its reasoning chain.
 - **Architecture tabs**: a flow-first white canvas with soft clusters and a permanent flow sidebar on the right. The complete board fits on load and tab switch. Scroll/trackpad pinch zooms toward the pointer; empty-canvas drag pans; `−`, `+`, `Fit`, and keyboard equivalents are visible. Semantic zoom automatically reveals technology subtitles and secondary edge labels as space permits.
 - **Components**: pale family fills, saturated family strokes, black centered text, and conventional outer silhouettes—phones, hexagonal services, cylinders, cache chips, queue capsules, workers, buckets, and books.
@@ -361,7 +389,7 @@ A client-side architecture uses the same enum: `mobile` or `client` for the shel
 
 ## DESIGN.md format
 
-Frontmatter: `date`, `mode`, `status`, `decided` (when set). Sections, in order: Context → Architectural debt (repo mode only; omitted entirely in greenfield, since an empty heading claims a survey that never ran) → Requirements → Core entities and invariants → Data and consistency model → Database schemas → System interfaces → Estimates → Candidates → Comparison and recommendation → Critical deep dives → Operations and rollout → Risks and what breaks first → Measurements that could overturn the decision → Next steps → Notes (user-owned; preserved verbatim on regeneration; created empty).
+Frontmatter: `date`, `mode`, `status`, `decided` (when set). Sections, in order: Context → Investigation evidence and open questions → Architectural debt (repo mode only; omitted entirely in greenfield, since an empty heading claims a survey that never ran) → Requirements → Core entities and invariants → Data and consistency model → Database schemas → System interfaces → Estimates → Candidates → Comparison and recommendation → Critical deep dives → Operations and rollout → Risks and what breaks first → Measurements that could overturn the decision → Next steps → Notes (user-owned; preserved verbatim on regeneration; created empty).
 
 Debt sits beside Context because both describe the system that exists; everything after Requirements describes the one being proposed. Keep it away from Risks: a risk is a future failure with a horizon, a finding is a present defect with a cost, and a reader who has to separate them again has been given a worse document. Format it like Risks — one bullet per finding, severity in trailing parentheses — and group under `###` per category only when the volume earns it.
 
