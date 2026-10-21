@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 1.3.4 — 2026-10-21
+
+### Fixed
+
+- Treat timeouts as unknown caller observations in payment and workflow contracts, calculate recovery in time units, and include UUIDv7 as a time-ordered alternative.
+
 ## 1.3.3 — 2026-10-21
 
 ### Fixed
