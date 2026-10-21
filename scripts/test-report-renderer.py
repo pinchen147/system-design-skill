@@ -572,6 +572,31 @@ def assert_unembeddable_designs_fail_before_writing() -> None:
             assert not report_path.exists(), f"{name}: a report was written"
 
 
+def assert_audit_coverage_without_findings(design_path: Path) -> None:
+    """An audit with missing proof remains reachable even when no finding is confirmed."""
+    with tempfile.TemporaryDirectory(prefix="system-design-audit-coverage-") as directory:
+        source, report = Path(directory) / "design.json", Path(directory) / "report.html"
+        fixture = json.loads(design_path.read_text())
+        fixture["mode"] = "greenfield"
+        fixture.pop("debt", None)
+        source.write_text(json.dumps(fixture))
+        render_report(source, report)
+        assert 'id="tab-debt"' not in run_chrome(report, "overview"), "greenfield has no audit"
+        fixture["mode"] = "repo"
+        for coverage in ({"unverified": [{"check": "UNVERIFIED_ONLY", "reason": "PROOF_UNAVAILABLE"}]},
+                         {"checked": ["coupling"]}):
+            fixture["debt"] = {"findings": [], **coverage}
+            source.write_text(json.dumps(fixture))
+            render_report(source, report)
+            dom = run_chrome(report, "debt")
+            assert re.search(r'id="tab-debt"[^>]*aria-selected="true"', dom), "audit coverage tab is unreachable"
+            panel = debt_section(dom)
+            for value in (("UNVERIFIED_ONLY", "PROOF_UNAVAILABLE") if "unverified" in coverage
+                          else ("Categories examined: coupling",)):
+                assert value in panel, f"audit coverage disappeared: {value}"
+            assert re.search(r'<section id="sec-debt"(?![^>]*hidden)[^>]*>', dom)
+
+
 def assert_investigation_renders(design_path: Path) -> None:
     """The report preserves evidence limits and distinguishes missing checks from success."""
     with tempfile.TemporaryDirectory(prefix="system-design-investigation-") as temp_dir:
@@ -641,6 +666,7 @@ def main() -> None:
     title = assert_report_geometry(args.design, args.route)
     assert_legacy_interfaces_render_as_dashes(args.design)
     assert_debt_tab_renders(args.design)
+    assert_audit_coverage_without_findings(args.design)
     assert_investigation_renders(args.design)
     assert_debt_survives_a_malformed_register(args.design)
     print(f"PASS: {title} architecture {args.route}")

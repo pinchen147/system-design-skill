@@ -346,7 +346,8 @@ document.getElementById("rdate").textContent = D.updatedAt || "";
 const tabDefs = [{id:"overview",label:"Overview"}]
   .concat(archs.map(a=>({id:a.id,label:a.id==="current"?"Current":a.id.toUpperCase()+" — "+shortName(a.name)})))
   .concat([{id:"compare",label:"Compare"}])
-  .concat((D.debt?.findings||[]).length ? [{id:"debt",label:"Debt"}] : []);
+  .concat((D.debt?.findings||[]).length || (D.mode==="repo" &&
+    ((D.debt?.checked||[]).length || (D.debt?.unverified||[]).length)) ? [{id:"debt",label:"Debt"}] : []);
 const tabsNav = document.getElementById("tabs");
 tabsNav.innerHTML = tabDefs.map(t=>`<button role="tab" id="tab-${esc(t.id)}" aria-selected="false" data-tab="${esc(t.id)}">${esc(t.label)}</button>`).join("");
 tabsNav.addEventListener("click", e => { const b=e.target.closest("button"); if(b) location.hash="#"+b.dataset.tab; });
