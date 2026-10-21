@@ -31,8 +31,8 @@ def fail(message: str) -> NoReturn:
 
 def read_template() -> str:
     try:
-        template = TEMPLATE.read_text()
-    except OSError as error:
+        template = TEMPLATE.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
         fail(f"cannot read template {TEMPLATE}: {error}")
     count = template.count(PLACEHOLDER)
     if count != 1:
@@ -50,8 +50,8 @@ def reject_constant(name: str) -> NoReturn:
 
 def read_design(design_path: Path) -> dict:
     try:
-        text = design_path.read_text()
-    except OSError as error:
+        text = design_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
         fail(f"cannot read design {design_path}: {error}")
     try:
         design = json.loads(text, parse_constant=reject_constant)
@@ -134,8 +134,8 @@ def main() -> None:
     out_path = args.out.expanduser().resolve()
     try:
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(rendered)
-    except OSError as error:
+        out_path.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError) as error:
         fail(f"cannot write {out_path}: {error}")
 
     check_title(design, rendered, out_path)

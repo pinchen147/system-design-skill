@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 1.3.2 — 2026-10-21
+
+### Fixed
+
+- Read and write reports explicitly as UTF-8 and report invalid Unicode through the existing diagnostic.
+
 ## 1.3.1 — 2026-10-14
 
 ### Added
