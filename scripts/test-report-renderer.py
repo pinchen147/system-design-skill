@@ -343,7 +343,13 @@ def assert_debt_tab_renders(design_path: Path) -> None:
                 "whyItMatters": "WHY_SENTINEL",
                 "remedy": {"action": "consolidate", "text": "REMEDY_SENTINEL"},
                 "effort": "M", "resolvedBy": [], "disconfirming": "OBJECTION_SENTINEL",
-                "verification": {"gates": {"real": "pass"}, "lenses": [], "tools": [], "survived": 1},
+                "verification": {"gates": {"real": "pass"}, "lenses": [
+                    {"lens": "VERDICT_MISSING"},
+                    {"lens": "VERDICT_NULL", "refuted": None},
+                    {"lens": "VERDICT_STRING", "refuted": "false"},
+                    {"lens": "VERDICT_FALSE", "refuted": False},
+                    {"lens": "VERDICT_TRUE", "refuted": True},
+                ], "tools": [], "survived": 1},
                 "status": "open", "firstSeen": "2026-08-11", "baselineState": "new",
             }],
         }
@@ -356,6 +362,12 @@ def assert_debt_tab_renders(design_path: Path) -> None:
         for sentinel in ("EVIDENCE_SENTINEL", "WHY_SENTINEL", "REMEDY_SENTINEL",
                          "OBJECTION_SENTINEL", "UNVERIFIED_SENTINEL"):
             assert sentinel in rendered, f"debt field was dropped: {sentinel}"
+        for lens, verdict in (("MISSING", "not established"), ("NULL", "not established"),
+                              ("STRING", "not established"), ("FALSE", "survived"),
+                              ("TRUE", "refuted")):
+            assert f"VERDICT_{lens}:</b> {verdict}" in rendered, (
+                f"verification verdict {lens} was not rendered as {verdict}"
+            )
         assert "<unsafe>" not in rendered
         assert "&lt;unsafe&gt; &amp; quoted" in rendered
         # Printing must open every disclosure and every tab, and must not ship
@@ -560,6 +572,62 @@ def assert_unembeddable_designs_fail_before_writing() -> None:
             assert not report_path.exists(), f"{name}: a report was written"
 
 
+def assert_investigation_renders(design_path: Path) -> None:
+    """The report preserves evidence limits and distinguishes missing checks from success."""
+    with tempfile.TemporaryDirectory(prefix="system-design-investigation-") as temp_dir:
+        temp = Path(temp_dir)
+        fixture = json.loads(design_path.read_text())
+        source, report = temp / "design.json", temp / "report.html"
+        source.write_text(json.dumps(fixture))
+        render_report(source, report)
+        def overview():
+            dom = run_chrome(report, "overview")
+            match = re.search(r'<section id="sec-overview".*?(?=<section id="sec-)', dom, re.S)
+            assert match, "overview did not render"
+            return match.group(0)
+
+        assert "Investigation coverage not recorded" in overview()
+        fixture["investigation"] = {
+            "session": {"id": "SESSION_SENTINEL", "revision": 7},
+            "evidence": [{"id": "ev-1", "claim": "CLAIM <unsafe> & precise",
+                          "type": "observed", "scope": "SCOPE_SENTINEL",
+                          "limitations": ["LIMIT_SENTINEL"], "freshness": "stale",
+                          "sources": [{"path": "src/example.py", "sha256": "HASH_SENTINEL"}],
+                          "references": ["javascript:UNTRUSTED_REFERENCE"]}],
+            "unknowns": [{"id": "u-1", "question": "UNKNOWN_SENTINEL", "status": "open",
+                          "evidenceRefs": ["ev-1"], "resolution": ""}],
+            "questions": [{"id": "q-1", "question": "QUESTION_SENTINEL", "status": "partial",
+                           "evidenceRefs": ["missing-id"], "answer": "ANSWER_SENTINEL"}],
+            "checks": [{"id": "c-1", "check": "PASS_SENTINEL", "status": "pass",
+                        "evidenceRefs": ["ev-1"], "detail": "DETAIL_SENTINEL"},
+                       {"id": "c-2", "check": "FAIL_SENTINEL", "status": "fail"},
+                       {"id": "c-3", "check": "UNKNOWN_CHECK", "status": "unknown"},
+                       {"id": "c-4", "check": "MISSING_CHECK"}],
+        }
+        source.write_text(json.dumps(fixture))
+        render_report(source, report)
+        panel = overview()
+        for text in ("SESSION_SENTINEL", "Revision: 7", "SCOPE_SENTINEL", "LIMIT_SENTINEL",
+                     "HASH_SENTINEL", "src/example.py", "UNKNOWN_SENTINEL", "QUESTION_SENTINEL",
+                     "ANSWER_SENTINEL", "DETAIL_SENTINEL", "Missing evidence: missing-id",
+                     "CLAIM &lt;unsafe&gt; &amp; precise", "javascript:UNTRUSTED_REFERENCE"):
+            assert text in panel, f"investigation record was dropped or corrupted: {text}"
+        for name, status in (("PASS_SENTINEL", "Passed"), ("FAIL_SENTINEL", "Failed"),
+                             ("UNKNOWN_CHECK", "Unknown"), ("MISSING_CHECK", "Not established")):
+            row = re.search(r"<tr>[^<]*<td[^>]*>" + name + r"</td>(.*?)</tr>", panel, re.S)
+            assert row and f">{status}</td>" in row.group(1), f"wrong check outcome for {name}"
+        assert 'href="javascript:' not in panel
+        assert "<unsafe>" not in panel
+        assert "Investigation coverage not recorded" not in panel
+        assert re.search(r"<details[^>]*>\s*<summary>Evidence \(1\)</summary>", panel)
+        fixture["investigation"] = {"session": {"id": "empty", "revision": 0}}
+        source.write_text(json.dumps(fixture))
+        render_report(source, report)
+        empty = overview()
+        assert "No checks recorded; coverage not established" in empty
+        assert "No evidence recorded" in empty
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--design", type=Path, default=DEFAULT_DESIGN)
@@ -573,6 +641,7 @@ def main() -> None:
     title = assert_report_geometry(args.design, args.route)
     assert_legacy_interfaces_render_as_dashes(args.design)
     assert_debt_tab_renders(args.design)
+    assert_investigation_renders(args.design)
     assert_debt_survives_a_malformed_register(args.design)
     print(f"PASS: {title} architecture {args.route}")
 
