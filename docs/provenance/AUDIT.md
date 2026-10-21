@@ -220,6 +220,7 @@ is applied here as a design budget, not as a measured property of this feature.
 
 | Claim | Source |
 |---|---|
+| Missing current coverage does not establish disappearance; retain historical decisions with unknown verification | [REA scoped-coverage boundary](https://github.com/morluto/rea/blob/705058f3e2df82503f1c601fc464aea7cbb626b8/docs/reconstruction-coverage.md) and local audit identity policy. Historical severity is not a newly verified verdict. |
 | A fingerprint must be "the same for all results that are logically identical, and different for any two results that are logically distinct… resistant to changes that do not affect the logical identity" | SARIF v2.1.0 errata01 §3.27.16 |
 | Partial fingerprints carry only what a matcher cannot derive for itself; the producer contributes ingredients, the management system computes the identity | ibid. §3.27.17 |
 | Fingerprint keys are versioned hierarchical strings, and a matcher uses the greatest version common to both records | ibid. §3.5.4.2 |
@@ -241,6 +242,7 @@ own, not borrowed.
 
 | Claim | Source |
 |---|---|
+| Checked categories identify inspected scope, not proof of absence; unknown checks expose identity, missing evidence, and next probe | Local output contract applying the scoped-coverage rule. Unknowns do not count toward survived checks. |
 | Suppressed items are shown as suppressed rather than omitted, so they remain searchable and auditable | Datadog Code Security · https://docs.datadoghq.com/security/code_security/static_analysis/ |
 | Accepting an item should state what accepting it costs, not merely record a dismissal | SonarQube 10.4 release notes · https://www.sonarsource.com/products/sonarqube/whats-new/sonarqube-10-4/ |
 | Triage reasons reduce in practice to false positive, acceptable risk, and no time | Semgrep PR-comment triage verbs · https://semgrep.dev/docs/ |
@@ -250,15 +252,3 @@ own, not borrowed.
 | Tools cannot detect structural and architectural debt, so equating debt with what a tool finds leaves large amounts unrecorded — the reason `checked` and the unverified list are written | Kruchten, Nord & Ozkaya, IEEE Software 29(6) 2012 |
 | Bad architecture choices are the top-ranked debt source (54% of top-three rankings, mean rank 4.3), while 41% of teams use no tools for it and 16% found the tools they had gave appropriate detail | Ernst et al., FSE 2015 · https://cs.unibg.it/esecfse_proceedings/fse15/p50-ernst.pdf |
 | Run-to-run recall of a model-authored finding set is not established by any published work | No source. Stated as a limitation for exactly that reason. |
-
-## Identity and merge
-
-| Claim | Source |
-|---|---|
-| Missing current coverage does not establish disappearance; retain historical decisions with unknown verification | [REA scoped-coverage boundary](https://github.com/morluto/rea/blob/705058f3e2df82503f1c601fc464aea7cbb626b8/docs/reconstruction-coverage.md) and local audit identity policy. Historical severity is not a newly verified verdict. |
-
-## Recording the audit
-
-| Claim | Source |
-|---|---|
-| Checked categories identify inspected scope, not proof of absence; unknown checks expose identity, missing evidence, and next probe | Local output contract applying the scoped-coverage rule. Unknowns do not count toward survived checks. |
