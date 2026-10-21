@@ -53,7 +53,7 @@ Otherwise derive a kebab-case slug naming the system or subsystem, not the phras
 
 State the mode, reason, whether you resumed, and the target directory in one line.
 
-For an artifact-producing run, use the bundled [local runtime](RUNTIME.md) to initialize or resume the investigation register in `design.json`. It is part of this installed skill; the existing coding agent supplies reasoning and tools. Read its command help only when needed. Keep the direct-answer route artifact-free. Legacy designs remain readable; initialize their register explicitly without inventing past evidence. Reuse current records, inspect stale ones, and follow a returned recovery action before repeating discovery.
+For a new artifact-producing run, first create a minimal draft `design.json` with `version: 2`, `slug`, `title`, `mode`, and `status: "draft"` in the chosen directory. Preserve existing designs. Use the bundled [local runtime](RUNTIME.md) to initialize or resume its investigation register. It is part of this installed skill; the existing coding agent supplies reasoning and tools. Read its command help only when needed. Keep the direct-answer route artifact-free. Legacy designs remain readable; initialize their register explicitly without inventing past evidence. Reuse current records, inspect stale ones, and follow a returned recovery action before repeating discovery.
 
 ### 2. Establish the current truth
 

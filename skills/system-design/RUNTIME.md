@@ -78,11 +78,11 @@ Other input records:
 
 Question status is `open | partial | answered`; unknown status is `open | resolved`; check status is `pass | fail | unknown`. Missing input status defaults to open, open, and unknown respectively. Missing `evidenceRefs` defaults to an empty array; answer/resolution/detail defaults to an empty string. Stored records carry every field explicitly.
 
-A pass, resolution, or answered question requires references to currently fresh evidence and nonempty result text. This is a structural prerequisite, not a machine judgment that the evidence is sufficient. The host must still check scope, authority, and contradictions. Missing references are errors, not evidence to invent. All mutations refresh existing evidence before publishing their records.
+A pass, resolution, or answered question requires references to currently fresh evidence and nonempty result text. This is a structural prerequisite, not a machine judgment that the evidence is sufficient. The host must still check scope, authority, and contradictions. Missing references are errors, not evidence to invent. All design-replacing mutations refresh existing evidence before publishing their records; checkpoint preserves bytes without changing freshness.
 
 ## State and checkpoints
 
-`investigation` contains `session: {id, revision}` and `evidence`, `unknowns`, `questions`, and `checks` arrays. These are canonical tracked JSON alongside the design. Each successful state mutation advances the revision; init starts at zero. Checkpoint alone changes no revision. A revision is session bookkeeping; the raw-file SHA detects ordinary design edits as well as runtime edits.
+`investigation` contains `session: {id, revision}` and `evidence`, `unknowns`, `questions`, and `checks` arrays. These are canonical tracked JSON alongside the design. Each successful state mutation advances the revision; init starts at zero. Checkpoint alone changes no revision. Recovery advances the restored checkpoint’s revision, which can be lower than the damaged document’s revision. A revision is session bookkeeping, not a globally monotonic concurrency token; the raw-file SHA detects ordinary design edits as well as runtime edits.
 
 Before replacing the design, the runtime preserves exact previous bytes in the sibling `<design-stem>.history/<sha256>.json`. Track these snapshots with the design when retaining investigation history. Existing snapshots must match their names; they are never overwritten by a command. A corrupt current document can also be retained there as exact recovery evidence, despite its `.json` extension.
 

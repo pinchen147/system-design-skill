@@ -250,3 +250,15 @@ own, not borrowed.
 | Tools cannot detect structural and architectural debt, so equating debt with what a tool finds leaves large amounts unrecorded — the reason `checked` and the unverified list are written | Kruchten, Nord & Ozkaya, IEEE Software 29(6) 2012 |
 | Bad architecture choices are the top-ranked debt source (54% of top-three rankings, mean rank 4.3), while 41% of teams use no tools for it and 16% found the tools they had gave appropriate detail | Ernst et al., FSE 2015 · https://cs.unibg.it/esecfse_proceedings/fse15/p50-ernst.pdf |
 | Run-to-run recall of a model-authored finding set is not established by any published work | No source. Stated as a limitation for exactly that reason. |
+
+## Identity and merge
+
+| Claim | Source |
+|---|---|
+| Missing current coverage does not establish disappearance; retain historical decisions with unknown verification | [REA scoped-coverage boundary](https://github.com/morluto/rea/blob/705058f3e2df82503f1c601fc464aea7cbb626b8/docs/reconstruction-coverage.md) and local audit identity policy. Historical severity is not a newly verified verdict. |
+
+## Recording the audit
+
+| Claim | Source |
+|---|---|
+| Checked categories identify inspected scope, not proof of absence; unknown checks expose identity, missing evidence, and next probe | Local output contract applying the scoped-coverage rule. Unknowns do not count toward survived checks. |
