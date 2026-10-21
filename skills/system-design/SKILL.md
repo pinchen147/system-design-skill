@@ -143,7 +143,7 @@ Where a subagent primitive exists, run one finder per category and one verifier 
 
 Write the result into `design.json` under `debt`, including what was checked and what could not be established. Findings may seed `risks` and `nextSteps`; they never generate a candidate, and they never become an ADR.
 
-The audit is done when every finding cites evidence and passes all four debt tests, every `blocking` finding names by id the invariant or target it violates, and `debt.checked` lists every category examined, with every check the run could not establish recorded rather than dropped.
+The audit is done when every newly confirmed finding cites evidence and passes all four debt tests, every `blocking` finding names by id the invariant or target it violates, and `debt.checked` lists every category examined. Retain historical findings whose current checks are unknown with that limitation visible; do not present them as newly confirmed. Record every check the run could not establish rather than dropping it.
 
 ### 9. Write, render, and verify
 

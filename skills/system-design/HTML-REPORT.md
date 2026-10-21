@@ -281,7 +281,7 @@ If no opener works—headless box, remote session—print the absolute path and 
         "resolvedBy": ["b"],             // architecture ids that remove it; [] when no candidate does
         "disconfirming": "ADR-0004 records the shared table, but for reads only — writes were never decided.",
         "verification": {                // what actually ran, so a reader can weigh the claim
-          "gates": { "real": "pass", "live": "pass" },
+          "gates": { "real": "pass", "live": "pass" }, // pass | refuted | unknown
           "lenses": [ { "lens": "uncovered", "refuted": false, // true: refuted; false: survived; null: unknown
                         "objection": "ADR-0004 covers reads, not writes" },
                       { "lens": "unstated", "refuted": false, "objection": "no trade-off is recorded" } ],
