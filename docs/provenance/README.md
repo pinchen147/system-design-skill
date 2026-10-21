@@ -22,6 +22,8 @@ Nothing links here from `SKILL.md`, so the model never opens it and it costs zer
 
 ## Files
 
+- [SKILL.md](SKILL.md) — routing, resume, and completion contracts
+- [RUNTIME.md](RUNTIME.md) — bundled command contracts and recovery limits
 - [HEURISTICS.md](HEURISTICS.md) — the decision rules, the ladders, the envelope numbers
 - [ARCHETYPES.md](ARCHETYPES.md) — per-shape numbers anchors and anti-gates
 - [AUDIT.md](AUDIT.md) — the debt patterns, the severity axes, the suppressions, and the identity scheme

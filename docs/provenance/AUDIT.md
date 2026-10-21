@@ -43,9 +43,9 @@ Stripe survey above.
 
 | Claim | Source |
 |---|---|
-| A model is a weak detector of architectural smells — 63.1% of tool-detected smells were expert-judged false positives, and the most aggressive repair agent introduced 140 new ones | *SmellBench*, Dinu, Mihăescu & Rebedea · https://arxiv.org/abs/2605.07001 · **preprint, 0 citations** |
-| The same agents are strong *refuters* — κ up to 0.94 with experts at identifying false positives | ibid. |
-| Reframing a prompt alone produces decision flip rates of 40–72%; under a false premise ("this already passed static analysis") recall drops to 0.00; evidence-first prompting cuts flips to 12–26% | https://arxiv.org/html/2607.10411 · **preprint** |
+| In the studied Python project, 63.1% of PyExamine detections were expert-judged false positives; this is not a measured false-positive rate for model-generated architectural findings | *SmellBench*, Dinu, Mihăescu & Rebedea · https://arxiv.org/abs/2605.07001 · **preprint** |
+| Refutation agreement reached κ 0.94 on 52 unambiguous cases; 13 ambiguous cases were excluded, and another tested agent wrongly dismissed genuine smells. No universal reliability claim follows | ibid. |
+| Framing changed judgments in the tested model/smell cells; zero recall occurred in particular cells. Evidence-guided prompting helped some conditions, but Table 3 includes flip rates above the narrative 12–26% range | https://arxiv.org/html/2607.10411 · **preprint** |
 | Temperature 0 is not deterministic — 4 models × 70 commits × 5 identical runs with cleared context still varied | https://arxiv.org/html/2502.20747 |
 | LLMs score F1 < 0.40 on genuinely architectural smells while winning on Large Class and Long Method; ground truth from 76 developers over 268 candidates in 30 Java projects | https://arxiv.org/abs/2601.09873 |
 | Agent-only code review correlates with worse outcomes: 45.20% merge rate vs 68.37% human-only; agent comments addressed 0.9–19.2% of the time vs ~60% | MSR '26 · https://arxiv.org/abs/2604.03196 · peer-reviewed |
@@ -60,14 +60,16 @@ Stripe survey above.
 systematic review or controlled study measuring whether teams using them experience less erosion was
 found. Cite it as a defined practice, never as an evidence-backed intervention.
 
+**Rejected.** “Models are reliable disprovers” as a universal rule; the cited evidence is task- and sample-specific. “Cannot decide means refuted” does not follow from the framing study and loses the difference between missing evidence and contradiction. The narrative 12–26% range is not a complete range of the table’s results; do not restore it as a universal bound.
+
 ## Stage briefs
 
 | Claim | Source |
 |---|---|
-| Gather structural indicators before judging — the ordering, not the content, is what moves the flip rate | https://arxiv.org/html/2607.10411 |
+| The study evaluates a bundled evidence-guided prompting intervention; it does not isolate ordering from content | https://arxiv.org/html/2607.10411 |
 | Files that change together reveal coupling invisible to static dependency analysis; validated over 20 releases of a large telecom switching system | Gall, Hajek & Jazayeri, ICSM '98 · https://plg.uwaterloo.ca/~migod/846/papers/gall-coupling.pdf |
 | Bug-fix locality is measurable from version control — the number of source files touched per fix | Hunt & Thomas, *The Pragmatic Programmer*, 2nd ed. 2019, Topic 10 |
-| A verifier must be asked to refute and must default to refuted under uncertainty | Follows from the sycophancy result above; the framing is this file's, not the paper's |
+| Undecidable checks remain unknown; they cannot count as refutations or survived attempts | [REA coverage contract](https://github.com/morluto/rea/blob/705058f3e2df82503f1c601fc464aea7cbb626b8/docs/reconstruction-coverage.md) and local three-state audit policy. This is a correctness boundary, not a measured precision improvement |
 
 ## Categories and patterns
 
